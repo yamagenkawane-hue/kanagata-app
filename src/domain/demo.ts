@@ -12,9 +12,9 @@ export function createDemo(): PlanData {
     { id: "a2", productId: "p1", name: "コア", quantity: 1, drawingNumber: "DEMO-102" },
     { id: "a3", productId: "p2", name: "固定側入子", quantity: 2, drawingNumber: "DEMO-201" },
     { id: "a4", productId: "p2", name: "可動側入子", quantity: 2, drawingNumber: "DEMO-202" },
-    { id: "a5", productId: "p3", name: "パンチ", quantity: 1, drawingNumber: "DEMO-301" },
+    { id: "a5", productId: "p3", name: "パンチプレート", quantity: 1, drawingNumber: "DEMO-301" },
   ];
-  const equipment = PROCESSES.flatMap((process, index) => Array.from({ length: index < 3 ? 2 : 1 }, (_, machine) => ({ id: `${process.code}-${machine + 1}`, name: `${["MC", "研磨", "WIRE", "型組台", "トライ機"][index]}-${String(machine + 1).padStart(2, "0")}`, process: process.code })));
+  const equipment = PROCESSES.flatMap((process, index) => Array.from({ length: index === 2 ? 4 : index < 3 ? 2 : 1 }, (_, machine) => ({ id: `${process.code}-${machine + 1}`, name: `${["MC", "研磨", "WIRE", "型組台", "トライ機"][index]}-${String(machine + 1).padStart(2, "0")}`, process: process.code })));
   const workers = ["田中", "佐藤", "鈴木", "高橋", "山本", "伊藤", "渡辺", "中村", "小林", "加藤"].map((name, index) => ({ id: `w${index + 1}`, name: `${name}（デモ）` }));
   const calendar: Record<string, boolean> = {};
   for (let index = -7; index < 120; index++) {
@@ -29,7 +29,8 @@ export function createDemo(): PlanData {
     breakRun: false, fixed: false, plannedStart: "", plannedEnd: "", segments: [],
   })));
   for (const machine of equipment) tasks = renumber(tasks, machine.id);
-  const data: PlanData = { products, parts, equipment, workers, tasks, logs: [], calendar, revision: 1 };
+  const bom = parts.map((part) => ({ id: `bom-${part.id}`, productId: part.productId, name: part.name, kind: part.id === "a5" ? "plate" as const : "part" as const, quantity: part.quantity, notes: "確認用サンプル", processes: PROCESSES.map((process) => process.code), archived: false }));
+  const data: PlanData = { products, bom, parts: parts.map(part => ({...part,bomId:`bom-${part.id}`,processes:PROCESSES.map(process=>process.code)})), equipment, workers, tasks, logs: [], calendar, revision: 1 };
   data.tasks = schedule(data);
   data.tasks = data.tasks.map((task) => task.id === "a1-machining" ? { ...task, status: "completed", actualStart: task.plannedStart, actualEnd: task.plannedEnd } : task.id === "a1-grinding" ? { ...task, status: "running", actualStart: task.plannedStart } : task);
   for (const machine of equipment) data.tasks = renumber(data.tasks, machine.id);

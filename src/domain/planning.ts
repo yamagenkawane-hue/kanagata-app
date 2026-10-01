@@ -8,10 +8,11 @@ export const PROCESSES = [
 export type ProcessCode = (typeof PROCESSES)[number]["code"];
 export type TaskStatus = "pending" | "running" | "completed";
 export type Segment = { start: string; end: string };
-export type Product = { id: string; name: string; customer: string; dueDate: string; notes: string };
-export type Part = { id: string; productId: string; name: string; quantity: number; drawingNumber: string };
-export type Equipment = { id: string; name: string; process: ProcessCode };
-export type Worker = { id: string; name: string };
+export type Product = { archived?: boolean; id: string; name: string; customer: string; dueDate: string; notes: string };
+export type BomItem = { id: string; productId: string; name: string; kind: "plate" | "part"; quantity: number; notes: string; processes: ProcessCode[]; archived: boolean };
+export type Part = { bomId?: string; processes?: ProcessCode[]; archived?: boolean; id: string; productId: string; name: string; quantity: number; drawingNumber: string };
+export type Equipment = { active?: boolean; id: string; name: string; process: ProcessCode };
+export type Worker = { role?: "admin" | "operator"; active?: boolean; id: string; name: string };
 export type Task = {
   id: string; partId: string; process: ProcessCode; equipmentId: string; workerId: string;
   duration: number; earliestStart: string; priority: number; status: TaskStatus;
@@ -25,7 +26,7 @@ export type WorkLog = {
   editedBy: string;
 };
 export type PlanData = {
-  products: Product[]; parts: Part[]; equipment: Equipment[]; workers: Worker[];
+  today?: string; bom?: BomItem[]; needsRecalculation?: boolean; products: Product[]; parts: Part[]; equipment: Equipment[]; workers: Worker[];
   tasks: Task[]; logs: WorkLog[]; calendar: Record<string, boolean>; revision: number;
 };
 export const BREAKS: [number, number][] = [[720, 770], [900, 910]];
@@ -123,8 +124,9 @@ export function schedule(data: PlanData): Task[] {
   const tasks = data.tasks.map((task) => ({ ...task, segments: task.segments.map((item) => ({ ...item })) }));
   const byId = new Map(tasks.map((task) => [task.id, task])); const dependencies = new Map(tasks.map((task) => [task.id, new Set<string>()]));
   for (const part of data.parts) {
-    const chain = PROCESSES.map((process) => tasks.find((task) => task.partId === part.id && task.process === process.code));
-    if (chain.some((item) => !item)) throw new Error(`${part.name} の5工程をすべて登録してください。`);
+    const required = part.processes ?? PROCESSES.map((process) => process.code);
+    const chain = PROCESSES.filter((process) => required.includes(process.code)).map((process) => tasks.find((task) => task.partId === part.id && task.process === process.code));
+    if (chain.some((item) => !item)) throw new Error(`${part.name} の必要工程をすべて登録してください。`);
     for (let index = 1; index < chain.length; index++) dependencies.get(chain[index]!.id)!.add(chain[index - 1]!.id);
   }
   for (const equipment of data.equipment) {

@@ -21,4 +21,4 @@ export async function proxy(request: NextRequest) {
   response.headers.set("Cache-Control", "private, no-store");
   return response;
 }
-export const config = { matcher: ["/login", "/workspace/:path*", "/api/auth/:path*", "/api/connection"] };
+export const config = { matcher: ["/login", "/workspace/:path*", "/api/auth/:path*", "/api/connection", "/api/business", "/api/calendar-import"] };

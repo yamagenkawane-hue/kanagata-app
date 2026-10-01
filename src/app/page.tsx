@@ -1,2 +1,2 @@
-import PlanningBoard from "@/components/planning/planning-board";
-export default function Home() { return <PlanningBoard />; }
+import { redirect } from "next/navigation";
+export default function Page(){redirect("/workspace");}

@@ -1,0 +1,53 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { PGlite } from "@electric-sql/pglite";
+import { randomUUID } from "node:crypto";
+const admin="11111111-1111-4111-8111-111111111111",operator="22222222-2222-4222-8222-222222222222";
+test("DB: schema, RLS, quantity, revision, roles, actual audit and rollback",async()=>{
+ const db=new PGlite();
+ try{
+  await db.exec(`create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;grant usage on schema auth to authenticated;grant execute on function auth.uid() to authenticated;`);
+  await db.exec(await readFile(new URL("../../supabase/migrations/202609300001_initial_schema.sql",import.meta.url),"utf8"));
+  await db.exec(await readFile(new URL("../../supabase/migrations/202610010001_bom_and_mutations.sql",import.meta.url),"utf8"));
+  await db.query("insert into auth.users values($1),($2)",[admin,operator]);
+  await db.query("insert into public.profiles(user_id,display_name,role) values($1,'管理者','admin'),($2,'担当者','operator')",[admin,operator]);
+  await db.exec(`set role authenticated;set request.jwt.claim.sub='${admin}';`);
+  const rpc=async(name:string,args:unknown[])=>{const result=await db.query<{result:unknown}>(`select public.${name}(${args.map((_,i)=>`$${i+1}`).join(",")}) as result`,args);return result.rows[0].result;};
+  await rpc("seed_test_data",[1]);
+  let data=await rpc("read_planning",[]) as {revision:number;bom:{id:string;productId:string;kind:string;processes:string[]}[];equipment:{id:string;process:string}[];tasks:{id:string}[];logs:{calculatedMinutes:number}[]};
+  assert.equal(data.equipment.filter(x=>x.process==="wire").length,4);
+  await assert.rejects(()=>rpc("seed_test_data",[1]),/更新/);
+  await db.exec(`set request.jwt.claim.sub='${operator}';`);
+  await assert.rejects(()=>rpc("manage_entity",["product",{},data.revision]),/管理者/);
+  await assert.rejects(()=>rpc("seed_test_data",[data.revision]),/管理者/);
+  await assert.rejects(()=>db.exec("update public.products set name='不正'"),/permission denied/);
+  await db.exec(`set request.jwt.claim.sub='${admin}';`);
+  await assert.rejects(()=>rpc("manage_entity",["user",{id:admin,name:"管理者",role:"operator",active:true},data.revision]),/最後の管理者/);
+  const productId=randomUUID();
+  await rpc("manage_entity",["product",{id:productId,name:"CRUD確認",customer:"テスト",dueDate:"2026-12-01",notes:"",archived:false},data.revision]);data=await rpc("read_planning",[]) as typeof data;
+  await rpc("manage_entity",["product",{id:productId,name:"編集済み",customer:"テスト",dueDate:"2026-12-02",notes:"更新",archived:true},data.revision]);data=await rpc("read_planning",[]) as typeof data;
+  const updated=await db.query<{name:string;is_archived:boolean}>("select name,is_archived from public.products where id=$1",[productId]);assert.equal(updated.rows[0].name,"編集済み");assert.equal(updated.rows[0].is_archived,true);
+  await rpc("manage_entity",["product",{id:productId,name:"編集済み",customer:"テスト",dueDate:"2026-12-02",notes:"更新",archived:false},data.revision]);data=await rpc("read_planning",[]) as typeof data;
+  const newBom=randomUUID();await rpc("manage_entity",["bom",{id:newBom,productId,name:"工程選択部品",kind:"part",quantity:3,notes:"",processes:["wire","machining"],archived:false},data.revision]);data=await rpc("read_planning",[]) as typeof data;
+  const bomRow=await db.query<{processes:string[]}>("select processes from public.bom_items where id=$1",[newBom]);assert.deepEqual(bomRow.rows[0].processes,["machining","wire"]);
+  const bom=data.bom.find(x=>x.kind==="part")!;
+  function plan(quantity:number){const partId=randomUUID();return {parts:[{id:partId,productId:bom.productId,bomId:bom.id,quantity,name:"ガイド部品"}],tasks:bom.processes.map((process,index)=>{const start=`2026-10-05T${String(9+index).padStart(2,"0")}:00:00+09:00`;const end=`2026-10-05T${String(10+index).padStart(2,"0")}:00:00+09:00`;return {id:randomUUID(),partId,process,equipmentId:data.equipment.filter(e=>e.process===process).at(-1)!.id,workerId:admin,duration:60,earliestStart:start,plannedStart:start,plannedEnd:end,priority:1,breakRun:false,overnight:false,fixed:false,status:"pending",segments:[{start,end}]};})};}
+  const first=plan(2);await rpc("commit_plan",[first,data.revision,false]);data=await rpc("read_planning",[]) as typeof data;
+  await assert.rejects(()=>rpc("commit_plan",[plan(3),data.revision,true]),/必要数量/);
+  const afterFailure=await rpc("read_planning",[]) as typeof data;assert.equal(afterFailure.revision,data.revision);assert.equal(afterFailure.tasks.length,data.tasks.length);
+  const second=plan(2);await rpc("commit_plan",[second,data.revision,true]);data=await rpc("read_planning",[]) as typeof data;
+  await assert.rejects(()=>rpc("commit_plan",[plan(1),data.revision,true]),/必要数量/);
+  const logId=randomUUID();const actual={id:logId,taskId:first.tasks[0].id,workerId:admin,start:"2026-10-05T11:30:00+09:00",end:"2026-10-05T13:20:00+09:00",status:"completed",reason:"",acceptOverlap:false};
+  await db.exec(`set request.jwt.claim.sub='${operator}';`);await rpc("save_actual",[actual,data.revision,false]);data=await rpc("read_planning",[]) as typeof data;assert.equal(data.logs[0].calculatedMinutes,60);
+  await assert.rejects(()=>rpc("save_actual",[{id:logId},data.revision,true]),/管理者/);
+  await db.exec(`set request.jwt.claim.sub='${admin}';`);await rpc("save_actual",[{id:logId},data.revision,true]);data=await rpc("read_planning",[]) as typeof data;assert.equal(data.logs.length,0);
+  await rpc("manage_entity",["part",{id:first.parts[0].id,name:"ガイド部品",quantity:2,archived:true},data.revision]);data=await rpc("read_planning",[]) as typeof data;
+  await rpc("commit_plan",[plan(2),data.revision,true]);data=await rpc("read_planning",[]) as typeof data;
+  await assert.rejects(()=>rpc("manage_entity",["bom",{id:bom.id,productId:bom.productId,name:"部品",kind:"part",quantity:3,notes:"",processes:bom.processes,archived:false},data.revision]),/登録済み数量/);
+  await rpc("manage_entity",["user",{id:operator,name:"担当者",role:"admin",active:true},data.revision]);data=await rpc("read_planning",[]) as typeof data;
+  await rpc("manage_entity",["user",{id:operator,name:"担当者",role:"operator",active:true},data.revision]);
+  await db.exec("reset role");const audit=await db.query<{count:number}>("select count(*)::integer count from public.change_logs");assert.ok(audit.rows[0].count>=4);
+  await db.exec("set role anon");await assert.rejects(()=>rpc("read_planning",[]),/permission denied/);
+ }finally{await db.close();}
+});
