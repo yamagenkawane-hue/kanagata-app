@@ -3,6 +3,7 @@ import { z } from "zod";
 import { boundedBody, sameOrigin } from "@/lib/business/http";
 import { actualSchema, masterSchemas, planSchema } from "@/domain/business";
 import { businessContext, BusinessError, readPlanning } from "@/lib/business/server";
+import { validatePlate } from "@/domain/plates";
 const headers={"Cache-Control":"private, no-store"};
 function errorResponse(cause:unknown){
  if(cause instanceof z.ZodError) return NextResponse.json({error:cause.issues.map(x=>x.message).join(" / ")},{status:400,headers});
@@ -22,6 +23,10 @@ export async function POST(request:Request){
   if(input.operation==="master"){
    if(!input.entity || !Object.hasOwn(masterSchemas,input.entity))throw new BusinessError("操作対象が不正です");
    const entity=input.entity as keyof typeof masterSchemas; const payload=masterSchemas[entity].parse(input.payload);
+   if(entity==="bom"){
+    const bom=masterSchemas.bom.parse(payload);const data=await readPlanning(context.client);
+    try{validatePlate(data.bom??[],bom);}catch(cause){throw new BusinessError(cause instanceof Error?cause.message:"プレートを確認してください");}
+   }
    rpc="manage_entity";args={entity,payload,expected:input.expected};
   }else if(input.operation==="plan"){
    rpc="commit_plan";args={payload:planSchema.parse(input.payload),expected:input.expected,accept_overlap:input.acceptOverlap??false};
