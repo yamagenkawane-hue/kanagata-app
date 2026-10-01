@@ -8,7 +8,7 @@ import { mutateBusiness } from "@/lib/business/client";
 import { remainingQuantity } from "@/domain/business";
 type Entity="product"|"bom"|"equipment"|"user"|"part";
 type EditRow=Partial<Product&BomItem&Equipment&Worker&Part>;
-const titles:Record<string,string>={products:"金型管理",bom:"BOM設定",equipment:"設備管理",users:"ユーザー設定",calendar:"会社カレンダー",actuals:"作業実績"};
+const titles:Record<string,string>={products:"金型管理",bom:"BOM設定",equipment:"工程管理",users:"ユーザー設定",calendar:"会社カレンダー",actuals:"作業実績"};
 export default function Management({initialData,role,section,productId,basePath="/workspace",demo=false}:{initialData:PlanData;role:"admin"|"operator";section:string;productId?:string;basePath?:string;demo?:boolean}){
  const [registerUser,setRegisterUser]=useState(false);const [data,setData]=useState(initialData);const [error,setError]=useState("");const [notice,setNotice]=useState("");const [busy,setBusy]=useState(false);const [edit,setEdit]=useState<{entity:Entity;row:EditRow}|null>(null);const [confirmation,setConfirmation]=useState<{entity:Entity;row:EditRow;label:string}|null>(null);const [seedConfirm,setSeedConfirm]=useState(false);const [showHidden,setShowHidden]=useState(false);const [importRows,setImportRows]=useState<{date:string;working:boolean;label?:string}[]|null>(null);const router=useRouter();const writable=role==="admin"&&!demo;
  const product=data.products.find(x=>x.id===productId);
