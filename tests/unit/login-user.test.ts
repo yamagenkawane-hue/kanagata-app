@@ -11,6 +11,8 @@ test("login user validates user ID, role and password without trimming password"
   assert.equal(parsed.userId, "yamada_01");
   assert.equal(loginEmail(parsed.userId), "yamada_01@users.kanagata.invalid");
   assert.equal(parsed.name, "利用者");
+  assert.equal(loginUserSchema.safeParse({ ...input, password: "12345678" }).success, true);
+  assert.equal(loginUserSchema.safeParse({ ...input, password: "1234567" }).success, false);
   for (const invalid of [{ password: "short" }, { userId: "user@example.com" }, { userId: "山田" }, { userId: "ab" }, { role: "owner" }, { name: " " }]) assert.equal(loginUserSchema.safeParse({ ...input, ...invalid }).success, false);
 });
 

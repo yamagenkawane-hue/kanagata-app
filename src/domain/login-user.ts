@@ -10,7 +10,7 @@ export function loginEmail(userId: string): string {
 export const loginUserSchema = z.object({
   userId: userIdSchema,
   name: z.string().trim().min(1).max(120),
-  password: z.string().min(12, "パスワードは12文字以上で入力してください").max(128),
+  password: z.string().min(8, "パスワードは8文字以上で入力してください").max(128),
   role: z.enum(["admin", "operator"]),
   expected: z.number().int().positive().optional(),
   initial: z.boolean().default(false),

@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   try {
     if (!sameOrigin(request)) throw new BusinessError("許可されていない要求です", 403);
     const parsed = loginUserSchema.safeParse(JSON.parse(new TextDecoder().decode(await boundedBody(request, 4096))));
-    if (!parsed.success) throw new BusinessError("ユーザーID（半角英数字・_・-、3〜32文字）・表示名・12文字以上のパスワードを確認してください");
+    if (!parsed.success) throw new BusinessError("ユーザーID（半角英数字・_・-、3〜32文字）・表示名・8文字以上のパスワードを確認してください");
     const input = parsed.data;
     let actor: string | null = null;
     if (input.initial) {
