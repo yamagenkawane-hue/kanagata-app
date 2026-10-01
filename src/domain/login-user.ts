@@ -13,5 +13,5 @@ export const loginUserSchema = z.object({
   password: z.string().min(12, "パスワードは12文字以上で入力してください").max(128),
   role: z.enum(["admin", "operator"]),
   expected: z.number().int().positive().optional(),
-  setupToken: z.string().max(256).optional(),
+  initial: z.boolean().default(false),
 });

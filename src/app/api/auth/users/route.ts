@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createHash, timingSafeEqual } from "node:crypto";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { businessContext, BusinessError } from "@/lib/business/server";
 import { boundedBody, sameOrigin } from "@/lib/business/http";
@@ -12,11 +11,7 @@ export async function POST(request: Request) {
     if (!parsed.success) throw new BusinessError("ユーザーID（半角英数字・_・-、3〜32文字）・表示名・12文字以上のパスワードを確認してください");
     const input = parsed.data;
     let actor: string | null = null;
-    if (input.setupToken !== undefined) {
-      const token = process.env.INITIAL_ADMIN_SETUP_TOKEN;
-      if (!token || token.length < 24) throw new BusinessError("初回登録用の合言葉をサーバーに設定してください（24文字以上）", 503);
-      const digest = (value: string) => createHash("sha256").update(value).digest();
-      if (!timingSafeEqual(digest(token), digest(input.setupToken))) throw new BusinessError("合言葉を確認してください", 403);
+    if (input.initial) {
       if (input.role !== "admin") throw new BusinessError("最初の利用者は管理者です");
     } else {
       const context = await businessContext();
