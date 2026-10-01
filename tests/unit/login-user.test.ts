@@ -2,15 +2,16 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
-import { loginUserSchema } from "../../src/domain/login-user.ts";
+import { loginUserSchema, loginEmail } from "../../src/domain/login-user.ts";
 
-test("login user validates email, role and password without trimming password", () => {
-  const input = { email: " user@example.com ", name: " 利用者 ", password: " abcdefghijk ", role: "operator" };
+test("login user validates user ID, role and password without trimming password", () => {
+  const input = { userId: " Yamada_01 ", name: " 利用者 ", password: " abcdefghijk ", role: "operator" };
   const parsed = loginUserSchema.parse(input);
   assert.equal(parsed.password, input.password);
-  assert.equal(parsed.email, "user@example.com");
+  assert.equal(parsed.userId, "yamada_01");
+  assert.equal(loginEmail(parsed.userId), "yamada_01@users.kanagata.invalid");
   assert.equal(parsed.name, "利用者");
-  for (const invalid of [{ password: "short" }, { email: "invalid" }, { role: "owner" }, { name: " " }]) assert.equal(loginUserSchema.safeParse({ ...input, ...invalid }).success, false);
+  for (const invalid of [{ password: "short" }, { userId: "user@example.com" }, { userId: "山田" }, { userId: "ab" }, { role: "owner" }, { name: " " }]) assert.equal(loginUserSchema.safeParse({ ...input, ...invalid }).success, false);
 });
 
 test("login profile RPC permits one bootstrap, restricts service access and checks administrator/revision", async () => {

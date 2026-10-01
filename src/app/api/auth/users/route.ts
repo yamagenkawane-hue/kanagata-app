@@ -3,13 +3,13 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { businessContext, BusinessError } from "@/lib/business/server";
 import { boundedBody, sameOrigin } from "@/lib/business/http";
-import { loginUserSchema } from "@/domain/login-user";
+import { loginUserSchema, loginEmail } from "@/domain/login-user";
 
 export async function POST(request: Request) {
   try {
     if (!sameOrigin(request)) throw new BusinessError("許可されていない要求です", 403);
     const parsed = loginUserSchema.safeParse(JSON.parse(new TextDecoder().decode(await boundedBody(request, 4096))));
-    if (!parsed.success) throw new BusinessError("メール・表示名・12文字以上のパスワードを確認してください");
+    if (!parsed.success) throw new BusinessError("ユーザーID（半角英数字・_・-、3〜32文字）・表示名・12文字以上のパスワードを確認してください");
     const input = parsed.data;
     let actor: string | null = null;
     if (input.setupToken !== undefined) {
@@ -30,8 +30,8 @@ export async function POST(request: Request) {
       if (check.error) throw new BusinessError("初期SQLを適用してください", 503);
       if (check.data.length) throw new BusinessError("初回登録は完了しています。管理者でログインしてください", 409);
     }
-    const created = await admin.auth.admin.createUser({ email: input.email, password: input.password, email_confirm: true });
-    if (created.error || !created.data.user) throw new BusinessError("ユーザーを作成できませんでした。メールの重複とSupabaseのパスワード条件を確認してください");
+    const created = await admin.auth.admin.createUser({ email: loginEmail(input.userId), password: input.password, email_confirm: true, app_metadata: { login_user_id: input.userId } });
+    if (created.error || !created.data.user) throw new BusinessError("ユーザーを作成できませんでした。ユーザーIDの重複とパスワード条件を確認してください");
     const saved = await admin.rpc("register_login_profile", { new_user: created.data.user.id, actor, display_name: input.name, new_role: input.role, expected: input.expected ?? null });
     if (saved.error) {
       const rollback = await admin.auth.admin.deleteUser(created.data.user.id);
