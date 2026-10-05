@@ -1,0 +1,50 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { PGlite } from "@electric-sql/pglite";
+import { availableBomNames } from "../../src/domain/bom-names.ts";
+import type { BomItem, BomName } from "../../src/domain/planning.ts";
+test("name options use the selected category and hide registered names only for plates", () => {
+ const names:BomName[]=[{id:"n1",categoryId:"plate",name:"追加プレート",active:true},{id:"n2",categoryId:"part",name:"ピン",active:true},{id:"n3",categoryId:"part",name:"停止部品",active:false}];
+ const item:BomItem={id:"b",productId:"p",categoryId:"plate",name:"追加プレート",kind:"plate",quantity:1,notes:"",processes:["wire"],archived:false};
+ assert.deepEqual(availableBomNames(names,[item],"p","plate","plate"),[]);
+ assert.deepEqual(availableBomNames(names,[item],"p","plate","plate","b"),["追加プレート"]);
+ assert.deepEqual(availableBomNames(names,[{...item,kind:"part",name:"ピン"}],"p","part","part"),["ピン"]);
+});
+test("name catalog migration, CRUD, saved snapshots, duplicate rules and role checks",async()=>{
+ const db=new PGlite();const admin="11111111-1111-4111-8111-111111111111",operator="22222222-2222-4222-8222-222222222222",product="33333333-3333-4333-8333-333333333333",nameId="44444444-4444-4444-8444-444444444444",bomId="55555555-5555-4555-8555-555555555555";
+ const plate="00000000-0000-4000-8000-000000000001",part="00000000-0000-4000-8000-000000000002";
+ try{
+  await db.exec("create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;grant usage on schema auth to authenticated;grant execute on function auth.uid() to authenticated;");
+  for(const file of ["202609300001_initial_schema.sql","202610010001_bom_and_mutations.sql","202610050001_bom_categories.sql"])await db.exec(await readFile(new URL(`../../supabase/migrations/${file}`,import.meta.url),"utf8"));
+  await db.query("insert into auth.users values($1),($2)",[admin,operator]);await db.query("insert into public.profiles(user_id,display_name,role) values($1,'管理者','admin'),($2,'担当者','operator')",[admin,operator]);
+  await db.query("insert into public.products(id,name,due_date) values($1,'金型','2026-11-01')",[product]);
+  await db.query("insert into public.bom_items(product_id,name,kind,quantity,processes) values($1,'旧パーツ','part',1,array['wire'])",[product]);
+  await db.exec(await readFile(new URL("../../supabase/migrations/202610050002_bom_names.sql",import.meta.url),"utf8"));
+  await db.exec(`set role authenticated;set request.jwt.claim.sub='${admin}'`);
+  const read=async()=>(await db.query<{value:{revision:number;bomNames:BomName[];bom:BomItem[]}}>("select public.read_planning() as value")).rows[0].value;
+  const save=async(entity:string,payload:unknown,expected?:number)=>db.query("select public.manage_entity($1,$2,$3)",[entity,JSON.stringify(payload),expected??(await read()).revision]);
+  assert.ok((await read()).bomNames.some(x=>x.name==="旧パーツ"));assert.equal((await read()).bomNames.filter(x=>x.categoryId===plate).length,10);
+  await save("bomName",{id:nameId,categoryId:plate,name:"追加プレート",active:true});
+  const item={id:bomId,productId:product,categoryId:plate,name:"追加プレート",kind:"plate",quantity:1,notes:"",processes:["wire"],archived:false};
+  await save("bom",item);
+  await assert.rejects(save("bom",{...item,id:"66666666-6666-4666-8666-666666666666"}),/登録済み/);
+  await assert.rejects(save("bom",{...item,name:"無登録プレート"}),/名称リスト/);
+  await save("bomName",{id:nameId,categoryId:plate,name:"改名プレート",active:false});
+  assert.equal((await read()).bom.find(x=>x.id===bomId)?.name,"追加プレート");
+  await save("bom",{...item,quantity:2});
+  await assert.rejects(save("bom",{...item,name:"改名プレート"}),/名称リスト/);
+  await save("bomName",{id:nameId,categoryId:plate,name:"改名プレート",active:true});
+  await save("bom",{...item,name:"改名プレート"});
+  await assert.rejects(save("bomName",{id:nameId,categoryId:part,name:"改名プレート",active:true}),/区分は変更できません/);
+  await save("bomName",{categoryId:part,name:"ピン",active:true});
+  await assert.rejects(save("bomName",{categoryId:part,name:"ピン",active:true}),/unique/);
+  for(const id of ["77777777-7777-4777-8777-777777777777","88888888-8888-4888-8888-888888888888"])await save("bom",{...item,id,categoryId:part,kind:"part",name:"ピン"});
+  await assert.rejects(save("bomName",{categoryId:part,name:"競合",active:true},1),/他の利用者/);
+  await db.query("select public.seed_test_data($1)",[(await read()).revision]);
+  assert.ok((await read()).bomNames.some(x=>x.name==="ガイド部品"));
+  await db.exec(`set request.jwt.claim.sub='${operator}'`);await assert.rejects(save("bomName",{categoryId:part,name:"担当者追加",active:true}),/管理者のみ/);
+  await assert.rejects(db.query("select public.manage_entity_before_names('bomName','{}',1)"),/permission denied/);
+  await db.exec("set role anon");await assert.rejects(db.query("select public.read_planning()"),/permission denied/);
+ }finally{await db.close();}
+});

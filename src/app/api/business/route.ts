@@ -26,7 +26,9 @@ export async function POST(request:Request){
    if(entity==="bom"){
     const bom=masterSchemas.bom.parse(payload);const data=await readPlanning(context.client);
     if(bom.categoryId){const category=data.categories?.find(item=>item.id===bom.categoryId);if(!category)throw new BusinessError("BOM区分の追加SQLを適用し、有効な区分を選択してください");bom.kind=category.kind;if(category.kind==="plate")bom.processes=["machining","grinding","wire","assembly","trial"];payload=bom;}
-    try{validatePlate(data.bom??[],bom);}catch(cause){throw new BusinessError(cause instanceof Error?cause.message:"プレートを確認してください");}
+    const categoryId=bom.categoryId??data.categories?.find(item=>item.kind===bom.kind)?.id;
+    const names=data.bomNames?.filter(item=>item.categoryId===categoryId&&item.active).map(item=>item.name);
+    try{validatePlate(data.bom??[],bom,names);}catch(cause){throw new BusinessError(cause instanceof Error?cause.message:"プレートを確認してください");}
    }
    rpc="manage_entity";args={entity,payload,expected:input.expected};
   }else if(input.operation==="plan"){
