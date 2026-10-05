@@ -37,7 +37,7 @@ export function createDemo(): PlanData {
   for (const product of products) for (const process of PROCESSES.filter(item=>item.code==='assembly'||item.code==='trial')) {
     const partId = product.id+'-'+process.code;
     data.parts.push({id:partId,productId:product.id,scope:'mold',name:process.name,quantity:1,drawingNumber:'',processes:[process.code]});
-    data.tasks.push({id:partId+'-task',partId,process:process.code,equipmentId:process.code+'-1',workerId:'w1',duration:470,earliestStart:at('2026-09-30',530),priority:products.indexOf(product)+1,status:'pending',overnight:false,breakRun:false,fixed:false,plannedStart:'',plannedEnd:'',segments:[]});
+    data.tasks.push({id:partId+'-task',partId,process:process.code,equipmentId:'',pressNo:'',workerId:'w1',duration:470,earliestStart:at('2026-09-30',530),priority:products.indexOf(product)+1,status:'pending',overnight:false,breakRun:false,fixed:false,plannedStart:'',plannedEnd:'',segments:[]});
   }
   data.tasks = schedule(data);
   data.tasks = data.tasks.map((task) => task.id === "a1-machining" ? { ...task, status: "completed", actualStart: task.plannedStart, actualEnd: task.plannedEnd } : task.id === "a1-grinding" ? { ...task, status: "running", actualStart: task.plannedStart } : task);

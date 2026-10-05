@@ -4,11 +4,11 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import { createDemo } from "../../src/domain/demo.ts";
-import { schedule, at, type PlanData, type Task } from "../../src/domain/planning.ts";
-import { masterSchemas } from "../../src/domain/business.ts";
+import { schedule, at, taskConflicts, type PlanData, type Task } from "../../src/domain/planning.ts";
+import { activePlan, masterSchemas } from "../../src/domain/business.ts";
 
-function append(data: PlanData, process: "assembly" | "trial", productId: string) {
-  const partId = randomUUID(), equipmentId = data.equipment.find(item => item.process === process)!.id;
+function append(data: PlanData, process: "assembly" | "trial", productId: string, withoutEquipment = false) {
+  const partId = randomUUID(), equipmentId = withoutEquipment ? "" : data.equipment.find(item => item.process === process)!.id;
   const task: Task = { id: randomUUID(), partId, process, equipmentId, workerId: data.workers[0].id, duration: 470, earliestStart: at("2026-10-05", 530), priority: data.tasks.filter(item => item.equipmentId === equipmentId).length + 1, status: "pending", overnight: false, breakRun: false, fixed: false, plannedStart: "", plannedEnd: "", segments: [] };
   const candidate: PlanData = { ...data, parts: [...data.parts, { id: partId, productId, scope: "mold", name: process, quantity: 1, drawingNumber: "", processes: [process] }], tasks: [...data.tasks, task] };
   candidate.tasks = schedule(candidate);
@@ -72,5 +72,30 @@ test("DB migration preserves legacy tasks; independent CRUD and dependencies are
     const part = data.parts.find(part => part.scope === "mold" && part.processes?.includes("trial"))!;
     await db.query("select public.manage_entity('part',$1,$2)", [JSON.stringify({ id: part.id, name: "トライ", archived: true }), data.revision]);
     data = await read(); assert.equal(data.parts.find(item => item.id === part.id)!.archived, true);
+    await db.exec("reset role");
+    await db.exec(await readFile(new URL("../../supabase/migrations/202610050005_press_no.sql", import.meta.url), "utf8"));
+    await db.exec(`set role authenticated;set request.jwt.claim.sub='${admin}';`);
+    data = await read();
+    for (const task of data.tasks.filter(task => data.parts.find(part => part.id === task.partId)?.scope === "mold")) assert.equal(task.equipmentId, "");
+    const noEquipment = append(activePlan(data), "trial", productId, true);
+    const newTrial = noEquipment.tasks.at(-1)!; newTrial.pressNo = "PRESS-07";
+    await save(noEquipment); data = await read();
+    assert.equal(data.tasks.find(task => task.id === newTrial.id)!.pressNo, "PRESS-07");
+    assert.equal(data.tasks.find(task => task.id === newTrial.id)!.equipmentId, "");
+    const updated = structuredClone(activePlan(data));
+    updated.tasks.find(task => task.id === newTrial.id)!.pressNo = "";
+    await save(updated); data = await read();
+    assert.equal(data.tasks.find(task => task.id === newTrial.id)!.pressNo, "");
+    const invalidEquipment = structuredClone(activePlan(data));
+    invalidEquipment.tasks.find(task => task.id === newTrial.id)!.equipmentId = data.equipment.find(item => item.process === "trial")!.id;
+    await assert.rejects(() => save(invalidEquipment), /設備の指定は不要/);
   } finally { await db.close(); }
+});
+
+test("mold processes need no equipment and do not share an equipment queue", () => {
+  const data = createDemo();
+  data.equipment = data.equipment.filter(item => !["assembly", "trial"].includes(item.process));
+  const tasks = schedule(data);
+  assert.equal(taskConflicts(tasks).length, 0);
+  assert.ok(tasks.filter(task => ["assembly", "trial"].includes(task.process)).every(task => task.equipmentId === ""));
 });

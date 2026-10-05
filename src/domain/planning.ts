@@ -18,6 +18,7 @@ export type Part = { scope?: "part" | "mold"; bomId?: string; processes?: Proces
 export type Equipment = { active?: boolean; id: string; name: string; process: ProcessCode };
 export type Worker = { role?: "admin" | "operator"; active?: boolean; id: string; name: string };
 export type Task = {
+  pressNo?: string;
   id: string; partId: string; process: ProcessCode; equipmentId: string; workerId: string;
   duration: number; earliestStart: string; priority: number; status: TaskStatus;
   overnight: boolean; breakRun: boolean; fixed: boolean; manualOverride?: boolean;
@@ -149,16 +150,18 @@ export function schedule(data: PlanData): Task[] {
     const queue = tasks.filter((task) => task.equipmentId === equipment.id && task.status === "pending" && !(task.fixed && task.manualOverride)).sort((a, b) => a.priority - b.priority || a.id.localeCompare(b.id));
     for (let index = 1; index < queue.length; index++) dependencies.get(queue[index].id)!.add(queue[index - 1].id);
   }
-  const busy = new Map(data.equipment.map((item) => [item.id, [] as Segment[]]));
+  const resourceKey = (task: Task) => task.equipmentId || task.id;
+  const busy = new Map(tasks.map((task) => [resourceKey(task), [] as Segment[]]));
   for (const task of tasks) {
+    const moldProcess = data.parts.some(part => part.id === task.partId && part.scope === "mold") && (task.process === "assembly" || task.process === "trial");
     const equipment = data.equipment.find((item) => item.id === task.equipmentId);
-    if (!equipment || equipment.process !== task.process) throw new Error("工程に対応する設備を選択してください。");
+    if ((!moldProcess || task.equipmentId) && (!equipment || equipment.process !== task.process)) throw new Error("工程に対応する設備を選択してください。");
     if (!data.workers.some((worker) => worker.id === task.workerId)) throw new Error("担当者を選択してください。");
     if (task.status === "pending" && !validDuration(task.process,task.duration)) throw new Error("所要時間・日数を正しく入力してください（時間は30分単位）。");
     if (task.overnight && (task.process === "assembly" || task.process === "trial")) throw new Error("型組・トライは夜間稼働を指定できません。");
     if (task.fixed || task.status !== "pending") {
       if (!task.plannedStart || !task.plannedEnd) throw new Error("固定予定の開始・終了を指定してください。");
-      busy.get(task.equipmentId)!.push(...(task.status === "completed" && task.actualStart && task.actualEnd ? [{ start: task.actualStart, end: task.actualEnd }] : task.segments.length ? task.segments : [{ start: task.plannedStart, end: task.plannedEnd }]));
+      busy.get(resourceKey(task))!.push(...(task.status === "completed" && task.actualStart && task.actualEnd ? [{ start: task.actualStart, end: task.actualEnd }] : task.segments.length ? task.segments : [{ start: task.plannedStart, end: task.plannedEnd }]));
     }
   }
   const processed = new Set<string>();
@@ -172,9 +175,9 @@ export function schedule(data: PlanData): Task[] {
       if (!Number.isFinite(earliest)) throw new Error("開始日時を入力してください。");
       if (task.fixed && task.status === "pending" && earliest > new Date(task.plannedStart).getTime()) throw new Error("固定予定より前に先行工程を終えられません。固定を解除するか順位を変更してください。");
       if (!task.fixed && task.status === "pending") {
-        task.segments = allocate(task, earliest, data.calendar, busy.get(task.equipmentId)!);
+        task.segments = allocate(task, earliest, data.calendar, busy.get(resourceKey(task))!);
         task.plannedStart = task.segments[0].start; task.plannedEnd = task.segments.at(-1)!.end;
-        busy.get(task.equipmentId)!.push(...task.segments);
+        busy.get(resourceKey(task))!.push(...task.segments);
       }
       processed.add(task.id);
     }
@@ -185,7 +188,7 @@ export function taskConflicts(tasks: Task[]): [string, string][] {
   const result: [string, string][] = [];
   for (let i = 0; i < tasks.length; i++) for (let j = i + 1; j < tasks.length; j++) {
     const a = tasks[i], b = tasks[j];
-    const occupiedA = a.status === "completed" && a.actualStart && a.actualEnd ? [{ start: a.actualStart, end: a.actualEnd }] : a.segments; const occupiedB = b.status === "completed" && b.actualStart && b.actualEnd ? [{ start: b.actualStart, end: b.actualEnd }] : b.segments; if (a.equipmentId === b.equipmentId && occupiedA.some((segment) => occupiedB.some((other) => overlaps(segment, other)))) result.push([a.id, b.id]);
+    const occupiedA = a.status === "completed" && a.actualStart && a.actualEnd ? [{ start: a.actualStart, end: a.actualEnd }] : a.segments; const occupiedB = b.status === "completed" && b.actualStart && b.actualEnd ? [{ start: b.actualStart, end: b.actualEnd }] : b.segments; if (a.equipmentId && a.equipmentId === b.equipmentId && occupiedA.some((segment) => occupiedB.some((other) => overlaps(segment, other)))) result.push([a.id, b.id]);
   }
   return result;
 }
