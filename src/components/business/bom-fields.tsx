@@ -1,16 +1,20 @@
 "use client";
 import { useState } from "react";
-import { PROCESSES, type BomItem, type Product } from "@/domain/planning";
+import { PROCESSES, type BomItem, type Product, type BomCategory } from "@/domain/planning";
 import { availablePlates } from "@/domain/plates";
+import { DEFAULT_BOM_CATEGORIES } from "@/domain/bom-categories";
 
-export default function BomFields({ row, products, items }: { row: Partial<BomItem>; products: Product[]; items: BomItem[] }) {
-  const [kind, setKind] = useState(row.kind ?? "part");
+export default function BomFields({ row, products, items, categories = DEFAULT_BOM_CATEGORIES }: { row: Partial<BomItem>; products: Product[]; items: BomItem[]; categories?: BomCategory[] }) {
+  const originalCategoryId = row.categoryId ?? categories.find(category => category.kind === (row.kind ?? "part") && (category.active || Boolean(row.id)))?.id;
+  const [categoryId, setCategoryId] = useState(originalCategoryId ?? "");
+  const kind = categories.find(category => category.id === categoryId)?.kind ?? row.kind ?? "part";
   const [productId, setProductId] = useState(row.productId ?? products.find(item => !item.archived)?.id ?? "");
   const [name, setName] = useState(row.name ?? "");
   const options = availablePlates(items, productId, row.id);
   const legacyName = kind === "plate" && row.kind === "plate" && row.name === name && name && !options.includes(name);
   return <>
-    <label>区分<select name="kind" value={kind} onChange={event => { setKind(event.target.value as "plate" | "part"); setName(""); }}><option value="plate">プレート（全5工程）</option><option value="part">パーツ（選択工程）</option></select></label>
+    <label>区分<select name="categoryId" value={categoryId} required onChange={event => { setCategoryId(event.target.value); setName(""); }}><option value="">区分を選択</option>{categories.filter(category => category.active || (Boolean(row.id) && category.id === originalCategoryId)).map(category => <option key={category.id} value={category.id}>{category.name}{!category.active && "（停止中）"}</option>)}</select></label>
+    <input type="hidden" name="kind" value={kind} />
     <label>名称{kind === "plate" ? <select name="name" value={name} onChange={event => setName(event.target.value)} required><option value="">プレートを選択</option>{legacyName && <option value={name}>{name}（現在の登録）</option>}{options.map(item => <option key={item} value={item}>{item}</option>)}</select> : <input name="name" value={name} onChange={event => setName(event.target.value)} required maxLength={120} />}</label>
     {kind === "plate" && !options.length && !legacyName && <p role="status">この金型には全種類のプレートが登録済みです。</p>}
     <label>金型<select name="productId" value={productId} onChange={event => { setProductId(event.target.value); setName(""); }} disabled={Boolean(row.id)} required>{products.filter(item => !item.archived || item.id === row.productId).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>

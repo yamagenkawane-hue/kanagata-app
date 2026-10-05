@@ -10,6 +10,7 @@ test("DB: schema, RLS, quantity, revision, roles, actual audit and rollback",asy
   await db.exec(`create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;grant usage on schema auth to authenticated;grant execute on function auth.uid() to authenticated;`);
   await db.exec(await readFile(new URL("../../supabase/migrations/202609300001_initial_schema.sql",import.meta.url),"utf8"));
   await db.exec(await readFile(new URL("../../supabase/migrations/202610010001_bom_and_mutations.sql",import.meta.url),"utf8"));
+  await db.exec(await readFile(new URL("../../supabase/migrations/202610050001_bom_categories.sql",import.meta.url),"utf8"));
   await db.query("insert into auth.users values($1),($2)",[admin,operator]);
   await db.query("insert into public.profiles(user_id,display_name,role) values($1,'管理者','admin'),($2,'担当者','operator')",[admin,operator]);
   await db.exec(`set role authenticated;set request.jwt.claim.sub='${admin}';`);

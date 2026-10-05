@@ -16,7 +16,7 @@ export default async function WorkspaceScreen({section=[],productQuery}:{section
   const title=kind==="process"?PROCESSES.find(x=>x.code===section[1])?.name:kind==="machines"?data.equipment.find(x=>x.id===section[1])?.name:"金型別 生産計画";
   return <><nav className="detail-breadcrumb"><Link href="/workspace">金型別計画</Link><span> / {title}</span><Link href="/workspace/actuals">実績一覧</Link><Link href="/workspace/bom">BOM設定</Link></nav><PlanningBoard key={`${data.revision}-${section.join("-")}`} initialDate={data.today??data.products[0]?.dueDate??"2026-10-01"} initialData={data} initialRole={context.role} basePath="/workspace" processFilter={kind==="process"?section[1]:""} machineFilter={kind==="machines"?section[1]:""} /></>;
  }
- if(!["products","bom","equipment","users","calendar","actuals"].includes(kind)||section.length>2||(section.length===2&&kind!=="products"))notFound();
+ if(!["products","bom","bom-categories","equipment","users","calendar","actuals"].includes(kind)||section.length>2||(section.length===2&&kind!=="products"))notFound();
  if(section[1]&&!data.products.some(x=>x.id===section[1]))notFound();
  return <Management key={`${data.revision}-${section.join("-")}-${productQuery}`} initialData={data} role={context.role} section={kind} productId={kind==="products"?section[1]:productQuery} />;
 }
