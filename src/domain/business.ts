@@ -1,3 +1,4 @@
+import { validDuration } from "./duration.ts";
 import { z } from "zod";
 import { PROCESSES, type PlanData } from "./planning.ts";
 const processCode = z.enum(["machining", "grinding", "wire", "assembly", "trial"]);
@@ -18,7 +19,7 @@ export const masterSchemas = {
 export const actualSchema = z.object({ id:uuid.optional(), taskId:uuid, workerId:uuid, start:instant, end:instant, status:z.enum(["pending","running","completed"]), overrideMinutes:z.number().int().min(0).max(44640).nullable().optional(), reason:z.string().max(2000), acceptOverlap:z.boolean() });
 export const planSchema = z.object({
  parts:z.array(z.object({id:uuid,productId:uuid,bomId:uuid.optional(),name:text,quantity:z.number().int().positive(),processes:z.array(processCode).optional(),drawingNumber:z.string().optional()})).max(2000),
- tasks:z.array(z.object({id:uuid,partId:uuid,process:processCode,equipmentId:uuid,workerId:uuid,duration:z.number().int().min(30).max(525600).refine(n=>n%30===0),earliestStart:instant,plannedStart:instant,plannedEnd:instant,priority:z.number().int().positive(),breakRun:z.boolean(),overnight:z.boolean(),fixed:z.boolean(),manualOverride:z.boolean().optional(),status:z.enum(["pending","running","completed"]),segments:z.array(z.object({start:instant,end:instant})).min(1).max(1000)})).max(10000),
+ tasks:z.array(z.object({id:uuid,partId:uuid,process:processCode,equipmentId:uuid,workerId:uuid,duration:z.number().int().min(30).max(525600),earliestStart:instant,plannedStart:instant,plannedEnd:instant,priority:z.number().int().positive(),breakRun:z.boolean(),overnight:z.boolean(),fixed:z.boolean(),manualOverride:z.boolean().optional(),status:z.enum(["pending","running","completed"]),segments:z.array(z.object({start:instant,end:instant})).min(1).max(1000)}).refine(task=>validDuration(task.process,task.duration),"所要時間・日数が不正です")).max(10000),
 });
 export function activePlan(data:PlanData):PlanData {
  const products=data.products.filter(x=>!x.archived); const ids=new Set(products.map(x=>x.id)); const parts=data.parts.filter(x=>!x.archived&&ids.has(x.productId)); const partIds=new Set(parts.map(x=>x.id)); const tasks=data.tasks.filter(x=>partIds.has(x.partId)); const taskIds=new Set(tasks.map(x=>x.id));

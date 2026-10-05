@@ -1,3 +1,4 @@
+import { validDuration } from "./duration.ts";
 export const PROCESSES = [
   { code: "machining", name: "マシニング", color: "#d4a23b", tint: "#fff2ca" },
   { code: "grinding", name: "自動研磨", color: "#38a578", tint: "#dbf3e5" },
@@ -140,7 +141,7 @@ export function schedule(data: PlanData): Task[] {
     const equipment = data.equipment.find((item) => item.id === task.equipmentId);
     if (!equipment || equipment.process !== task.process) throw new Error("工程に対応する設備を選択してください。");
     if (!data.workers.some((worker) => worker.id === task.workerId)) throw new Error("担当者を選択してください。");
-    if (task.status === "pending" && (!Number.isInteger(task.duration) || task.duration <= 0 || task.duration % 30 !== 0)) throw new Error("所要時間は30分単位で入力してください。");
+    if (task.status === "pending" && !validDuration(task.process,task.duration)) throw new Error("所要時間・日数を正しく入力してください（時間は30分単位）。");
     if (task.overnight && (task.process === "assembly" || task.process === "trial")) throw new Error("型組・トライは夜間稼働を指定できません。");
     if (task.fixed || task.status !== "pending") {
       if (!task.plannedStart || !task.plannedEnd) throw new Error("固定予定の開始・終了を指定してください。");
@@ -178,7 +179,7 @@ export function taskConflicts(tasks: Task[]): [string, string][] {
 
 
 export function placeAtRequestedStart(task: Task, calendar: PlanData["calendar"]): Task {
-  if (!Number.isInteger(task.duration) || task.duration <= 0 || task.duration % 30) throw new Error("所要時間は30分単位で入力してください。");
+  if (!validDuration(task.process,task.duration)) throw new Error("所要時間・日数を正しく入力してください（時間は30分単位）。");
   const startMs = new Date(task.earliestStart).getTime();
   if (!Number.isFinite(startMs)) throw new Error("開始日時を入力してください。");
   const segments = allocate(task, startMs, calendar, []);

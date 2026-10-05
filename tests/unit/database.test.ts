@@ -11,6 +11,7 @@ test("DB: schema, RLS, quantity, revision, roles, actual audit and rollback",asy
   await db.exec(await readFile(new URL("../../supabase/migrations/202609300001_initial_schema.sql",import.meta.url),"utf8"));
   await db.exec(await readFile(new URL("../../supabase/migrations/202610010001_bom_and_mutations.sql",import.meta.url),"utf8"));
   await db.exec(await readFile(new URL("../../supabase/migrations/202610050001_bom_categories.sql",import.meta.url),"utf8"));
+  await db.exec(await readFile(new URL("../../supabase/migrations/202610050003_task_days.sql",import.meta.url),"utf8"));
   await db.query("insert into auth.users values($1),($2)",[admin,operator]);
   await db.query("insert into public.profiles(user_id,display_name,role) values($1,'管理者','admin'),($2,'担当者','operator')",[admin,operator]);
   await db.exec(`set role authenticated;set request.jwt.claim.sub='${admin}';`);
@@ -48,7 +49,11 @@ test("DB: schema, RLS, quantity, revision, roles, actual audit and rollback",asy
   await assert.rejects(()=>rpc("manage_entity",["bom",{id:bom.id,productId:bom.productId,name:"部品",kind:"part",quantity:3,notes:"",processes:bom.processes,archived:false},data.revision]),/登録済み数量/);
   await rpc("manage_entity",["user",{id:operator,name:"担当者",role:"admin",active:true},data.revision]);data=await rpc("read_planning",[]) as typeof data;
   await rpc("manage_entity",["user",{id:operator,name:"担当者",role:"operator",active:true},data.revision]);
-  await db.exec("reset role");const audit=await db.query<{count:number}>("select count(*)::integer count from public.change_logs");assert.ok(audit.rows[0].count>=4);
+  await db.exec("reset role");
+  await db.exec("update public.tasks set duration_minutes=470 where process_code='assembly'");
+  await db.exec("update public.tasks set duration_minutes=940 where process_code='trial'");
+  await assert.rejects(()=>db.exec("update public.tasks set duration_minutes=470 where process_code='machining'"),/tasks_duration_minutes_check/);
+  const audit=await db.query<{count:number}>("select count(*)::integer count from public.change_logs");assert.ok(audit.rows[0].count>=4);
   await db.exec("set role anon");await assert.rejects(()=>rpc("read_planning",[]),/permission denied/);
  }finally{await db.close();}
 });
