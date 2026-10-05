@@ -7,13 +7,14 @@ export const PROCESSES = [
   { code: "trial", name: "トライ", color: "#d1785b", tint: "#fae5dc" },
 ] as const;
 export type ProcessCode = (typeof PROCESSES)[number]["code"];
+export const BOM_PROCESSES = PROCESSES.filter(process => process.code !== "assembly" && process.code !== "trial");
 export type TaskStatus = "pending" | "running" | "completed";
 export type Segment = { start: string; end: string };
 export type Product = { archived?: boolean; id: string; name: string; customer: string; dueDate: string; notes: string };
 export type BomCategory = { id: string; name: string; kind: "plate" | "part"; active: boolean };
 export type BomName = { id: string; categoryId: string; name: string; active: boolean };
 export type BomItem = { categoryId?: string; id: string; productId: string; name: string; kind: "plate" | "part"; quantity: number; notes: string; processes: ProcessCode[]; archived: boolean };
-export type Part = { bomId?: string; processes?: ProcessCode[]; archived?: boolean; id: string; productId: string; name: string; quantity: number; drawingNumber: string };
+export type Part = { scope?: "part" | "mold"; bomId?: string; processes?: ProcessCode[]; archived?: boolean; id: string; productId: string; name: string; quantity: number; drawingNumber: string };
 export type Equipment = { active?: boolean; id: string; name: string; process: ProcessCode };
 export type Worker = { role?: "admin" | "operator"; active?: boolean; id: string; name: string };
 export type Task = {
@@ -131,6 +132,18 @@ export function schedule(data: PlanData): Task[] {
     const chain = PROCESSES.filter((process) => required.includes(process.code)).map((process) => tasks.find((task) => task.partId === part.id && task.process === process.code));
     if (chain.some((item) => !item)) throw new Error(`${part.name} の必要工程をすべて登録してください。`);
     for (let index = 1; index < chain.length; index++) dependencies.get(chain[index]!.id)!.add(chain[index - 1]!.id);
+  }
+  for (const task of tasks) {
+    const owner = data.parts.find(part => part.id === task.partId);
+    if (owner?.scope !== "mold") continue;
+    for (const previous of tasks) {
+      const part = data.parts.find(part => part.id === previous.partId);
+      if (part?.productId !== owner.productId) continue;
+      if ((task.process === "assembly" && BOM_PROCESSES.some(process => process.code === previous.process)) ||
+          (task.process === "trial" && (previous.process === "assembly" || BOM_PROCESSES.some(process => process.code === previous.process)))) {
+        dependencies.get(task.id)!.add(previous.id);
+      }
+    }
   }
   for (const equipment of data.equipment) {
     const queue = tasks.filter((task) => task.equipmentId === equipment.id && task.status === "pending" && !(task.fixed && task.manualOverride)).sort((a, b) => a.priority - b.priority || a.id.localeCompare(b.id));

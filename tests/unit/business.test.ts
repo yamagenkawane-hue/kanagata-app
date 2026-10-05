@@ -6,7 +6,7 @@ import { remainingQuantity, orderedProcesses, masterSchemas } from "../../src/do
 import { createDemo } from "../../src/domain/demo.ts";
 import { schedule } from "../../src/domain/planning.ts";
 test("selected processes skip unused stages while keeping the standard order",()=>{
- const data=createDemo();const part=data.parts[0];part.processes=["machining","wire","assembly"];data.parts=[part];data.tasks=data.tasks.filter(t=>t.partId===part.id&&part.processes!.includes(t.process));data.tasks=data.tasks.map(t=>({...t,status:"pending" as const,fixed:false}));const tasks=schedule(data);assert.equal(tasks.length,3);assert.ok(Date.parse(tasks[1].plannedStart)>=Date.parse(tasks[0].plannedEnd));assert.deepEqual(orderedProcesses(["wire","machining"]),["machining","wire"]);
+ const data=createDemo();const part=data.parts[0];part.processes=["machining","wire"];data.parts=[part];data.tasks=data.tasks.filter(t=>t.partId===part.id&&part.processes!.includes(t.process));data.tasks=data.tasks.map(t=>({...t,status:"pending" as const,fixed:false}));const tasks=schedule(data);assert.equal(tasks.length,2);assert.ok(Date.parse(tasks[1].plannedStart)>=Date.parse(tasks[0].plannedEnd));assert.deepEqual(orderedProcesses(["wire","machining"]),["machining","wire"]);
 });
 test("quantity accounts for split batches and releases cancelled quantities",()=>{
  const data=createDemo();data.bom=[{id:"b",productId:"p1",name:"部品",kind:"part",quantity:4,notes:"",processes:["wire"],archived:false}];data.parts=[{id:"1",productId:"p1",bomId:"b",name:"部品",quantity:2,drawingNumber:""},{id:"2",productId:"p1",bomId:"b",name:"部品",quantity:1,drawingNumber:"",archived:true}];assert.equal(remainingQuantity(data,"b"),2);

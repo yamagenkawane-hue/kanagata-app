@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { PROCESSES, type BomItem, type Product, type BomCategory, type BomName } from "@/domain/planning";
+import { BOM_PROCESSES, type BomItem, type Product, type BomCategory, type BomName } from "@/domain/planning";
 import { availableBomNames } from "@/domain/bom-names";
 import { DEFAULT_BOM_CATEGORIES } from "@/domain/bom-categories";
 
@@ -20,7 +20,7 @@ export default function BomFields({ row, products, items, categories = DEFAULT_B
     <label>金型<select name="productId" value={productId} onChange={event => { setProductId(event.target.value); setName(""); }} disabled={Boolean(row.id)} required>{products.filter(item => !item.archived || item.id === row.productId).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
     {row.id && <input type="hidden" name="productId" value={productId} />}
     <label>必要数量<input name="quantity" type="number" min={1} defaultValue={row.quantity ?? 1} required /></label>
-    {kind === "part" && <fieldset><legend>必要工程</legend>{PROCESSES.map(item => <label className="checkbox" key={item.code}><input name="processes" type="checkbox" value={item.code} defaultChecked={row.processes?.includes(item.code)} />{item.name}</label>)}</fieldset>}
-    {kind === "plate" && <p className="help-text">プレートは全5工程を登録します。</p>}
+    {kind === "part" && <fieldset><legend>必要工程</legend>{BOM_PROCESSES.map(item => <label className="checkbox" key={item.code}><input name="processes" type="checkbox" value={item.code} defaultChecked={row.processes?.includes(item.code)} />{item.name}</label>)}</fieldset>}
+    {kind === "plate" && <p className="help-text">プレートはマシニング・自動研磨・ワイヤーを登録します。型組・トライは金型単位で別途登録します。</p>}
   </>;
 }

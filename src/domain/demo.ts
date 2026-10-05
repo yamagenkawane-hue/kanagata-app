@@ -1,6 +1,6 @@
 import { PLATE_NAMES } from "./plates.ts";
 import { DEFAULT_BOM_CATEGORIES } from "./bom-categories.ts";
-import { PROCESSES, addDays, at, renumber, schedule } from "./planning.ts";
+import { BOM_PROCESSES, PROCESSES, addDays, at, renumber, schedule } from "./planning.ts";
 import type { PlanData, Task } from "./planning.ts";
 
 export function createDemo(): PlanData {
@@ -23,7 +23,7 @@ export function createDemo(): PlanData {
     const day = addDays("2026-09-30", index); const weekday = new Date(`${day}T12:00:00+09:00`).getUTCDay();
     calendar[day] = weekday !== 0 && weekday !== 6;
   }
-  let tasks: Task[] = parts.flatMap((part, partIndex) => PROCESSES.map((process, index) => ({
+  let tasks: Task[] = parts.flatMap((part, partIndex) => BOM_PROCESSES.map((process, index) => ({
     id: `${part.id}-${process.code}`, partId: part.id, process: process.code,
     equipmentId: `${process.code}-${index < 3 ? partIndex % 2 + 1 : 1}`, workerId: `w${(partIndex + index) % 10 + 1}`,
     duration: [240, 120, 180, 90, 60][index] + (partIndex % 2 ? 30 : 0), earliestStart: at("2026-09-30", 530),
@@ -31,9 +31,14 @@ export function createDemo(): PlanData {
     breakRun: false, fixed: false, plannedStart: "", plannedEnd: "", segments: [],
   })));
   for (const machine of equipment) tasks = renumber(tasks, machine.id);
-  const bom = parts.map((part) => ({ id: `bom-${part.id}`, productId: part.productId, name: part.name, kind: part.id === "a5" ? "plate" as const : "part" as const, quantity: part.quantity, notes: "確認用サンプル", processes: PROCESSES.map((process) => process.code), archived: false }));
+  const bom = parts.map((part) => ({ id: `bom-${part.id}`, productId: part.productId, name: part.name, kind: part.id === "a5" ? "plate" as const : "part" as const, quantity: part.quantity, notes: "確認用サンプル", processes: BOM_PROCESSES.map((process) => process.code), archived: false }));
   const bomNames=[...PLATE_NAMES.map((name,index)=>({id:`plate-name-${index}`,categoryId:DEFAULT_BOM_CATEGORIES[0].id,name,active:true})),...bom.map(item=>({id:`name-${item.id}`,categoryId:DEFAULT_BOM_CATEGORIES.find(c=>c.kind===item.kind)!.id,name:item.name,active:true}))];
-  const data: PlanData = { bomNames, categories:DEFAULT_BOM_CATEGORIES, products, bom, parts: parts.map(part => ({...part,bomId:`bom-${part.id}`,processes:PROCESSES.map(process=>process.code)})), equipment, workers, tasks, logs: [], calendar, revision: 1 };
+  const data: PlanData = { bomNames, categories:DEFAULT_BOM_CATEGORIES, products, bom, parts: parts.map(part => ({...part,bomId:`bom-${part.id}`,processes:BOM_PROCESSES.map(process=>process.code)})), equipment, workers, tasks, logs: [], calendar, revision: 1 };
+  for (const product of products) for (const process of PROCESSES.filter(item=>item.code==='assembly'||item.code==='trial')) {
+    const partId = product.id+'-'+process.code;
+    data.parts.push({id:partId,productId:product.id,scope:'mold',name:process.name,quantity:1,drawingNumber:'',processes:[process.code]});
+    data.tasks.push({id:partId+'-task',partId,process:process.code,equipmentId:process.code+'-1',workerId:'w1',duration:470,earliestStart:at('2026-09-30',530),priority:products.indexOf(product)+1,status:'pending',overnight:false,breakRun:false,fixed:false,plannedStart:'',plannedEnd:'',segments:[]});
+  }
   data.tasks = schedule(data);
   data.tasks = data.tasks.map((task) => task.id === "a1-machining" ? { ...task, status: "completed", actualStart: task.plannedStart, actualEnd: task.plannedEnd } : task.id === "a1-grinding" ? { ...task, status: "running", actualStart: task.plannedStart } : task);
   for (const machine of equipment) data.tasks = renumber(data.tasks, machine.id);
