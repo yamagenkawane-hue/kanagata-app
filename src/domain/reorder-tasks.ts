@@ -1,10 +1,33 @@
-import { movePriority, placeAtRequestedStart, PROCESSES, type PlanData, type Task } from "./planning.ts";
+import { movePriority, overlaps, placeAtRequestedStart, PROCESSES, type PlanData, type Task } from "./planning.ts";
 
 export function canReorderTask(task:Task):boolean {
  return Boolean(task.equipmentId) && task.status==="pending" && !task.fixed;
 }
 
 export function canMoveTask(task:Task):boolean { return task.status==="pending"&&!task.fixed; }
+
+export function moveConflicts(data:PlanData,sourceId:string,start:string):Task[] {
+ const source=data.tasks.find(task=>task.id===sourceId);
+ if(!source||!source.equipmentId)return [];
+ const placed=placeAtRequestedStart({...source,earliestStart:start},data.calendar);
+ return data.tasks.filter(task=>task.id!==sourceId&&task.equipmentId===source.equipmentId&&placed.segments.some(segment=>(task.status==="completed"&&task.actualStart&&task.actualEnd?[{start:task.actualStart,end:task.actualEnd}]:task.segments.length?task.segments:[{start:task.plannedStart,end:task.plannedEnd}]).some(other=>overlaps(segment,other)))).sort((a,b)=>Date.parse(a.plannedStart)-Date.parse(b.plannedStart));
+}
+
+export function resolveTimeMove(data:PlanData,sourceId:string,start:string,mode:"shift"|"swap",targetId?:string):PlanData {
+ const source=data.tasks.find(task=>task.id===sourceId);
+ if(!source||!canMoveTask(source))throw new Error("移動できるのは固定されていない未着手の予定です。");
+ const placed=placeAtRequestedStart({...source,earliestStart:start},data.calendar);
+ let tasks:Task[];
+ if(mode==="swap"){
+  const target=data.tasks.find(task=>task.id===targetId);
+  if(!target||!canReorderTask(target)||!canReorderTask(source)||target.equipmentId!==source.equipmentId)throw new Error("作業中・完了済み・固定予定とは入れ替えできません。");
+  tasks=data.tasks.map(task=>task.id===sourceId?{...placed,priority:target.priority}:task.id===target.id?{...task,priority:source.priority,earliestStart:source.plannedStart}:task);
+ }else{
+  const delta=Date.parse(placed.plannedStart)-Date.parse(source.plannedStart);
+  tasks=data.tasks.map(task=>task.id===sourceId?placed:source.equipmentId&&task.equipmentId===source.equipmentId&&task.priority>source.priority&&canMoveTask(task)?{...task,earliestStart:new Date(Date.parse(task.plannedStart)+delta).toISOString()}:task);
+ }
+ return {...data,tasks:propagateOrder(data,tasks,sourceId)};
+}
 
 // Keep unrelated machine jobs in their slots while rearranging the matching
 // plates/parts of this mold in every subsequent manufacturing queue.

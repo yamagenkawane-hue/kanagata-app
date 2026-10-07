@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { reorderTasks, moveTaskInTime, propagateOrder } from "../../src/domain/reorder-tasks.ts";
+import { reorderTasks, moveTaskInTime, propagateOrder, moveConflicts, resolveTimeMove } from "../../src/domain/reorder-tasks.ts";
 import { createDemo } from "../../src/domain/demo.ts";
 import { schedule, at, type Task } from "../../src/domain/planning.ts";
 function task(id:string,priority:number):Task{return {id,partId:id,process:"machining",equipmentId:"m",workerId:"w",duration:60,earliestStart:at("2026-10-07",530),priority,status:"pending",overnight:false,breakRun:false,fixed:false,plannedStart:"",plannedEnd:"",segments:[]};}
@@ -46,4 +46,20 @@ test("propagation preserves fixed and unrelated tasks and their assigned machine
  const data={...createDemo(),parts:[{id:"a",productId:"p",name:"a",quantity:1,drawingNumber:""},{id:"b",productId:"p",name:"b",quantity:1,drawingNumber:""}],equipment:[{id:"g",name:"g",process:"grinding" as const}]};
  const result=propagateOrder(data,[a,b,ga,other,gb],"a");assert.equal(result.find(task=>task.id==="gb")!.priority,1);assert.equal(result.find(task=>task.id==="ga")!.priority,3);assert.deepEqual(result.find(task=>task.id==="other"),other);
  const fixed={...ga,fixed:true};assert.deepEqual(propagateOrder(data,[a,b,fixed,other,gb],"a").find(task=>task.id==="ga"),fixed);
+});
+
+test("overlapping drag offers distinct shift and swap results, preserving a delay for every following job",()=>{
+ const jobs=[task("a",1),task("b",2),task("c",3)];jobs.forEach((task,index)=>{task.plannedStart=at("2026-10-07",530+index*60);task.plannedEnd=at("2026-10-07",590+index*60);task.segments=[{start:task.plannedStart,end:task.plannedEnd}];});
+ const data={...createDemo(),tasks:jobs,parts:jobs.map(task=>({id:task.partId,productId:"p",name:task.id,quantity:1,drawingNumber:"",processes:["machining"] as "machining"[]})),products:[{id:"p",name:"mold",customer:"",dueDate:"2026-10-20",notes:""}],equipment:[{id:"m",name:"m",process:"machining" as const}],workers:[{id:"w",name:"w"}],calendar:{"2026-10-07":true,"2026-10-08":true}};
+ assert.deepEqual(moveConflicts(data,"a",at("2026-10-07",590)).map(task=>task.id),["b"]);
+ const shifted=resolveTimeMove(data,"a",at("2026-10-07",590),"shift");
+ assert.deepEqual(order(shifted.tasks),["a","b","c"]);
+ assert.equal(shifted.tasks.find(task=>task.id==="b")!.earliestStart,at("2026-10-07",650));
+ assert.equal(shifted.tasks.find(task=>task.id==="c")!.earliestStart,at("2026-10-07",710));
+ assert.deepEqual(schedule(shifted).map(task=>task.plannedStart),[at("2026-10-07",590),at("2026-10-07",650),at("2026-10-07",710)]);
+ const swapped=schedule(resolveTimeMove(data,"a",at("2026-10-07",590),"swap","b"));
+ assert.deepEqual(order(swapped),["b","a","c"]);assert.equal(swapped.find(task=>task.id==="b")!.plannedStart,at("2026-10-07",530));
+ const fixed={...data,tasks:jobs.map(task=>task.id==="b"?{...task,fixed:true}:task)};
+ assert.throws(()=>resolveTimeMove(fixed,"a",at("2026-10-07",590),"swap","b"));
+ assert.deepEqual(resolveTimeMove(fixed,"a",at("2026-10-07",590),"shift").tasks.find(task=>task.id==="b"),fixed.tasks[1]);
 });
