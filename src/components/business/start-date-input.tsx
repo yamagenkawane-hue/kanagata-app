@@ -27,11 +27,11 @@ export default function StartDateInput({data,task,...props}:Props) {
  const options=useMemo(()=>data&&criteria?availableStarts(day,criteria,data):[],[data,criteria,day]);
  const valid=options.includes(chosen)?chosen:"";
  return <span ref={holder} style={{display:"grid",gap:8}}>{data&&criteria?<>
-  <input aria-label="開始可能日" type="date" value={day} disabled={props.disabled} onChange={event=>{setDay(event.target.value);setChosen("");}} onClick={event=>{try{event.currentTarget.showPicker();}catch{}}} />
+  <input key="available-day" aria-label="開始可能日" type="date" value={day} disabled={props.disabled} onChange={event=>{setDay(event.target.value);setChosen("");}} onClick={event=>{try{event.currentTarget.showPicker();}catch{}}} />
   <select name={props.name} aria-label="空いている開始時刻" required={props.required} disabled={props.disabled} value={valid} onChange={event=>setChosen(event.target.value)}>
    <option value="">{options.length?"空いている開始時刻を選択してください":"この日の開始候補はありません"}</option>
    {options.map(value=><option key={value} value={value}>{value.slice(11)}</option>)}
   </select>
   <small className="help-text">{data.equipment.find(item=>item.id===criteria.equipmentId)?.name}：所要時間が予定と重ならない開始時刻のみ表示。後工程と加工順は確認画面で再計算します。</small>
- </>:<input {...props} type="datetime-local" onClick={event=>{const input=event.currentTarget;if(input.disabled||input.readOnly||typeof input.showPicker!=="function")return;try{input.showPicker();}catch{}}} />}</span>;
+ </>:<input key="native-datetime" {...props} type="datetime-local" onClick={event=>{const input=event.currentTarget;if(input.disabled||input.readOnly||typeof input.showPicker!=="function")return;try{input.showPicker();}catch{}}} />}</span>;
 }
