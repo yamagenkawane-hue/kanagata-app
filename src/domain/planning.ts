@@ -171,7 +171,8 @@ export function schedule(data: PlanData): Task[] {
     for (const task of ready) {
       const previous = [...dependencies.get(task.id)!].map((id) => byId.get(id)!);
       const ends = previous.map((item) => new Date(item.status === "completed" && item.actualEnd ? item.actualEnd : item.plannedEnd).getTime());
-      const earliest = Math.max(new Date(task.earliestStart).getTime(), ...ends);
+      const nextAssemblyDays = task.process === "trial" ? previous.filter(item=>item.process==="assembly").map(item=>new Date(at(addDays(dateKey(item.plannedEnd),1),530)).getTime()) : [];
+      const earliest = Math.max(new Date(task.earliestStart).getTime(), ...ends, ...nextAssemblyDays);
       if (!Number.isFinite(earliest)) throw new Error("開始日時を入力してください。");
       if (task.fixed && task.status === "pending" && earliest > new Date(task.plannedStart).getTime()) throw new Error("固定予定より前に先行工程を終えられません。固定を解除するか順位を変更してください。");
       if (!task.fixed && task.status === "pending") {

@@ -77,11 +77,21 @@ test("DB migration preserves legacy tasks; independent CRUD and dependencies are
     await db.exec(`set role authenticated;set request.jwt.claim.sub='${admin}';`);
     data = await read();
     for (const task of data.tasks.filter(task => data.parts.find(part => part.id === task.partId)?.scope === "mold")) assert.equal(task.equipmentId, "");
+    await db.exec("reset role");
+    await db.exec(await readFile(new URL("../../supabase/migrations/202610070001_trial_next_day.sql", import.meta.url), "utf8"));
+    await db.exec(`set role authenticated;set request.jwt.claim.sub='${admin}';`);
+    data = await read();
     const noEquipment = append(activePlan(data), "trial", productId, true);
     const newTrial = noEquipment.tasks.at(-1)!; newTrial.pressNo = "PRESS-07";
     await save(noEquipment); data = await read();
     assert.equal(data.tasks.find(task => task.id === newTrial.id)!.pressNo, "PRESS-07");
     assert.equal(data.tasks.find(task => task.id === newTrial.id)!.equipmentId, "");
+    const sameDay=structuredClone(activePlan(data));
+    const assemblyEnd=sameDay.tasks.find(task=>task.process==="assembly" && sameDay.parts.some(part=>part.id===task.partId && part.scope==="mold" && part.productId===productId))!.plannedEnd;
+    const invalidTrial=sameDay.tasks.find(task=>task.id===newTrial.id)!;
+    invalidTrial.plannedStart=assemblyEnd;invalidTrial.plannedEnd=new Date(Date.parse(assemblyEnd)+470*60_000).toISOString();invalidTrial.segments=[{start:invalidTrial.plannedStart,end:invalidTrial.plannedEnd}];
+    await assert.rejects(()=>save(sameDay),/翌日以降/);
+    assert.equal((await read()).revision,data.revision);
     const updated = structuredClone(activePlan(data));
     updated.tasks.find(task => task.id === newTrial.id)!.pressNo = "";
     await save(updated); data = await read();
@@ -98,4 +108,13 @@ test("mold processes need no equipment and do not share an equipment queue", () 
   const tasks = schedule(data);
   assert.equal(taskConflicts(tasks).length, 0);
   assert.ok(tasks.filter(task => ["assembly", "trial"].includes(task.process)).every(task => task.equipmentId === ""));
+});
+
+test("trial begins on a working day after the scheduled assembly end, even when actual completion was earlier",()=>{
+ const assembly:Task={id:"assembly",partId:"a",process:"assembly",equipmentId:"",workerId:"w",duration:470,earliestStart:at("2026-10-09",530),priority:1,status:"completed",overnight:false,breakRun:false,fixed:false,plannedStart:at("2026-10-09",530),plannedEnd:at("2026-10-09",640),actualStart:at("2026-10-08",530),actualEnd:at("2026-10-08",640),segments:[{start:at("2026-10-09",530),end:at("2026-10-09",640)}]};
+ const trial:Task={...assembly,id:"trial",partId:"t",process:"trial",status:"pending",actualStart:undefined,actualEnd:undefined,plannedStart:"",plannedEnd:"",segments:[]};
+ const data:PlanData={revision:1,products:[{id:"p",name:"mold",customer:"",dueDate:"2026-10-20",notes:""}],parts:[{id:"a",productId:"p",scope:"mold",name:"assembly",quantity:1,drawingNumber:"",processes:["assembly"]},{id:"t",productId:"p",scope:"mold",name:"trial",quantity:1,drawingNumber:"",processes:["trial"]}],equipment:[],workers:[{id:"w",name:"worker"}],tasks:[assembly,trial],logs:[],calendar:{"2026-10-09":true,"2026-10-10":false,"2026-10-11":false,"2026-10-12":true}};
+ assert.equal(schedule(data).find(task=>task.id==="trial")!.plannedStart,at("2026-10-12",530));
+ data.tasks[1]={...trial,fixed:true,plannedStart:at("2026-10-09",770),plannedEnd:at("2026-10-12",770),segments:[{start:at("2026-10-09",770),end:at("2026-10-09",900)}]};
+ assert.throws(()=>schedule(data),/固定予定/);
 });
