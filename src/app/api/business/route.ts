@@ -32,7 +32,13 @@ export async function POST(request:Request){
    }
    rpc="manage_entity";args={entity,payload,expected:input.expected};
   }else if(input.operation==="plan"){
-   rpc="commit_plan";args={payload:planSchema.parse(input.payload),expected:input.expected,accept_overlap:input.acceptOverlap??false};
+   const payload=planSchema.parse(input.payload);
+   if(payload.tasks.some(task=>!task.equipmentId && (task.process==="assembly"||task.process==="trial"))){
+    const schema=await context.client.from("tasks").select("press_no").limit(0);
+    if(schema.error?.code==="42703"||schema.error?.code==="PGRST204")throw new BusinessError("型組・トライのDB設定が未完了です。SupabaseのSQL Editorで 202610050005_press_no.sql を実行し、画面を再読み込みしてください。",503);
+    if(schema.error)throw new BusinessError("型組・トライのDB設定を確認できませんでした。接続を確認してください。",503);
+   }
+   rpc="commit_plan";args={payload,expected:input.expected,accept_overlap:input.acceptOverlap??false};
   }else if(input.operation==="actual"){
    rpc="save_actual";args={payload:actualSchema.parse(input.payload),expected:input.expected,remove_log:false};
   }else if(input.operation==="deleteActual"){
