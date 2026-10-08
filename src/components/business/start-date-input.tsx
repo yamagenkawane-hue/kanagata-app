@@ -5,9 +5,16 @@ import { availableStarts } from "@/domain/available-starts";
 
 import { type PlanData, type Task } from "@/domain/planning";
 
+function roundStart(value:string):string {
+ if(!value)return value;
+ const parsed=new Date(`${value}:00+09:00`);
+ if(!Number.isFinite(parsed.getTime()))return value;
+ return new Date(Math.ceil(parsed.getTime()/1_800_000)*1_800_000+9*3_600_000).toISOString().slice(0,16);
+}
+
 type Props=Omit<ComponentProps<"input">,"type"|"onClick"> & {data?:PlanData;task?:Task};
 export default function StartDateInput({data,task,...props}:Props) {
- const initial=String(props.defaultValue??"");
+ const initial=roundStart(String(props.defaultValue??""));
  const [day,setDay]=useState(initial.slice(0,10));const [chosen,setChosen]=useState(initial);
  const [criteria,setCriteria]=useState<Task|null>(null);const holder=useRef<HTMLSpanElement>(null);
  const timeInput=useRef<HTMLInputElement>(null);
@@ -29,7 +36,7 @@ export default function StartDateInput({data,task,...props}:Props) {
  const valid=options.includes(chosen)?chosen:"";
  const ranges=useMemo(()=>{
   const result:{start:string;end:string}[]=[];
-  for(const value of options){const last=result.at(-1);if(last&&Date.parse(value)-Date.parse(last.end)===60_000)last.end=value;else result.push({start:value,end:value});}
+  for(const value of options){const last=result.at(-1);if(last&&Date.parse(value)-Date.parse(last.end)===1_800_000)last.end=value;else result.push({start:value,end:value});}
   return result;
  },[options]);
  useEffect(()=>{timeInput.current?.setCustomValidity(chosen&&!valid?"表示された時間帯から開始時刻を選んでください。":"");},[chosen,valid,criteria]);
@@ -38,10 +45,10 @@ export default function StartDateInput({data,task,...props}:Props) {
   <span className="available-time-panel"><span className="available-time-title">開始できる時間帯 · {data.equipment.find(item=>item.id===criteria.equipmentId)?.name}</span>
    <span className="available-time-ranges">{ranges.map(range=><button type="button" className="available-time-range" key={range.start} disabled={props.disabled} aria-pressed={Boolean(valid&&valid>=range.start&&valid<=range.end)} onClick={()=>setChosen(range.start)}>{range.start.slice(11)}{range.end!==range.start&&` 〜 ${range.end.slice(11)}`}</button>)}</span>
    {!ranges.length&&<span role="status">この日は開始できる時間帯がありません。別の日を選んでください。</span>}
-   <span className="available-time-adjust"><span>開始時刻</span><input ref={timeInput} aria-label="開始時刻" type="time" step={60} value={chosen.slice(11)} required={props.required} disabled={props.disabled} onChange={event=>setChosen(event.target.value?`${day}T${event.target.value}`:"")} /></span>
+   <span className="available-time-adjust"><span>開始時刻</span><input ref={timeInput} aria-label="開始時刻" type="time" step={1800} value={chosen.slice(11)} required={props.required} disabled={props.disabled} onChange={event=>setChosen(event.target.value?`${day}T${event.target.value}`:"")} /></span>
    {chosen&&!valid&&<span className="inline-error" role="status">表示された時間帯から選択してください。</span>}
   </span>
   <input type="hidden" name={props.name} value={valid} />
-  <small className="help-text">時間帯をクリックして選択。開始時刻は1分単位で調整できます。加工終了まで他の予定と重ならない候補です。</small>
- </>:<input key="native-datetime" {...props} type="datetime-local" onClick={event=>{const input=event.currentTarget;if(input.disabled||input.readOnly||typeof input.showPicker!=="function")return;try{input.showPicker();}catch{}}} />}</span>;
+  <small className="help-text">時間帯をクリックして選択。開始時刻は毎時00分・30分から選択できます。加工終了まで他の予定と重ならない候補です。</small>
+ </>:<input key="native-datetime" {...props} defaultValue={initial} min={props.min?roundStart(String(props.min)):undefined} step={1800} type="datetime-local" onClick={event=>{const input=event.currentTarget;if(input.disabled||input.readOnly||typeof input.showPicker!=="function")return;try{input.showPicker();}catch{}}} />}</span>;
 }
