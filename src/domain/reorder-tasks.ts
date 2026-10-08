@@ -1,4 +1,4 @@
-import { movePriority, overlaps, placeAtRequestedStart, PROCESSES, type PlanData, type Task } from "./planning.ts";
+import { movePriority, overlaps, placeAtRequestedStart, processCatalog, type PlanData, type Task } from "./planning.ts";
 
 export function canReorderTask(task:Task):boolean {
  return Boolean(task.equipmentId) && task.status==="pending" && !task.fixed;
@@ -32,7 +32,7 @@ export function resolveTimeMove(data:PlanData,sourceId:string,start:string,mode:
 // Keep unrelated machine jobs in their slots while rearranging the matching
 // plates/parts of this mold in every subsequent manufacturing queue.
 export function propagateOrder(data:PlanData,tasks:Task[],sourceId:string):Task[] {
- const source=tasks.find(task=>task.id===sourceId)!;
+ const PROCESSES=processCatalog(data);const source=tasks.find(task=>task.id===sourceId)!;
  const owner=data.parts.find(part=>part.id===source.partId);
  if(!owner||!source.equipmentId)return tasks;
  const ordered=tasks.filter(task=>task.process===source.process&&task.equipmentId===source.equipmentId&&canReorderTask(task)&&data.parts.some(part=>part.id===task.partId&&part.productId===owner.productId)).sort((a,b)=>a.priority-b.priority||a.id.localeCompare(b.id));

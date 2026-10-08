@@ -4,6 +4,7 @@ import { boundedBody, sameOrigin } from "@/lib/business/http";
 import { actualSchema, masterSchemas, planSchema } from "@/domain/business";
 import { businessContext, BusinessError, readPlanning } from "@/lib/business/server";
 import { validatePlate } from "@/domain/plates";
+import { processCatalog } from "@/domain/planning";
 const headers={"Cache-Control":"private, no-store"};
 function errorResponse(cause:unknown){
  if(cause instanceof z.ZodError) return NextResponse.json({error:cause.issues.map(x=>x.message).join(" / ")},{status:400,headers});
@@ -23,9 +24,15 @@ export async function POST(request:Request){
   if(input.operation==="master"){
    if(!input.entity || !Object.hasOwn(masterSchemas,input.entity))throw new BusinessError("操作対象が不正です");
    const entity=input.entity as keyof typeof masterSchemas; let payload=masterSchemas[entity].parse(input.payload);
+   if(entity==="process"){
+    const data=await readPlanning(context.client);
+    if(!data.processes)throw new BusinessError("工程追加のDB設定が必要です。SupabaseのSQL Editorで 202610080001_custom_processes.sql を実行してください。",503);
+   }
    if(entity==="bom"){
     const bom=masterSchemas.bom.parse(payload);const data=await readPlanning(context.client);
-    if(bom.categoryId){const category=data.categories?.find(item=>item.id===bom.categoryId);if(!category)throw new BusinessError("BOM区分の追加SQLを適用し、有効な区分を選択してください");bom.kind=category.kind;if(category.kind==="plate")bom.processes=["machining","grinding","wire"];payload=bom;}
+    if(bom.categoryId){const category=data.categories?.find(item=>item.id===bom.categoryId);if(!category)throw new BusinessError("BOM区分の追加SQLを適用し、有効な区分を選択してください");bom.kind=category.kind;payload=bom;}
+    const catalog=processCatalog(data);const previous=data.bom?.find(item=>item.id===bom.id);
+    if(new Set(bom.processes).size!==bom.processes.length||bom.processes.some(code=>!catalog.some(process=>process.code===code&&(process.active!==false||previous?.processes.includes(code)))))throw new BusinessError("有効な登録済み工程を選択してください。");
     const categoryId=bom.categoryId??data.categories?.find(item=>item.kind===bom.kind)?.id;
     const names=data.bomNames?.filter(item=>item.categoryId===categoryId&&item.active).map(item=>item.name);
     try{validatePlate(data.bom??[],bom,names);}catch(cause){throw new BusinessError(cause instanceof Error?cause.message:"プレートを確認してください");}

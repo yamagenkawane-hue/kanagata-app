@@ -3,13 +3,13 @@ import { notFound, redirect } from "next/navigation";
 import PlanningBoard from "@/components/planning/planning-board";
 import Management from "@/components/business/management";
 import { businessContext, BusinessError, readPlanning } from "@/lib/business/server";
-import { PROCESSES } from "@/domain/planning";
+import { processCatalog } from "@/domain/planning";
 export default async function WorkspaceScreen({section=[],productQuery}:{section?:string[];productQuery?:string}){
  let context;
  try{context=await businessContext();}catch(cause){if(cause instanceof BusinessError&&cause.status===401)redirect("/login");return <main className="login-screen"><section className="login-card"><h1>業務アカウントの設定が必要です</h1><p>{cause instanceof Error?cause.message:"接続できませんでした"}</p><Link className="button" href="/login">ログインへ</Link><Link className="demo-link" href="/demo">確認用デモ</Link></section></main>;}
  let data;
  try{data=await readPlanning(context.client);}catch(cause){return <main className="login-screen"><section className="login-card"><h1>DBの初期設定が必要です</h1><p>{cause instanceof Error?cause.message:"読み込めませんでした"}</p><p>初期SQLとBOM追加SQLを適用してください。設定手順はdocsにあります。</p><Link className="button" href="/workspace">再確認</Link><Link className="demo-link" href="/demo">確認用デモ</Link></section></main>;}
- const kind=section[0];
+ const PROCESSES=processCatalog(data);const kind=section[0];
  if(kind==="bom-categories")redirect("/workspace/bom-names");
  if(!kind||kind==="process"||kind==="machines"){
   if(kind==="process"&&(!PROCESSES.some(x=>x.code===section[1])||section.length!==2))notFound();

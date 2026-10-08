@@ -3,11 +3,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { canMoveTask } from "@/domain/reorder-tasks";
 import { ganttRows } from "@/domain/gantt-rows";
-import { BREAKS, PROCESSES, dateTimeLabel, timeLabel, type PlanData, type Task } from "@/domain/planning";
+import { BREAKS, processCatalog, dateTimeLabel, timeLabel, type PlanData, type Task } from "@/domain/planning";
 
 export default function MachineRows({tasks,data,days,dayWidth,timelineWidth,windowStart,windowEnd,selectedId,conflicts,basePath,onSelect,onList,canReorder,draggedId,onDrag,onMove}:{tasks:Task[];data:PlanData;days:string[];dayWidth:number;timelineWidth:number;windowStart:number;windowEnd:number;selectedId:string|null;conflicts:Set<string>;basePath:string;onSelect:(id:string)=>void;onList:(ids:string[])=>void;canReorder:boolean;draggedId:string|null;onDrag:(id:string|null)=>void;onMove:(sourceId:string,start:string)=>void}){
  const [dropTarget,setDropTarget]=useState<{row:string;left:number}|null>(null);
- return ganttRows(tasks).map(row=>{
+ const PROCESSES=processCatalog(data);
+ return ganttRows(tasks,PROCESSES).map(row=>{
   const first=row.tasks[0],process=PROCESSES.find(item=>item.code===first.process)!;
   const workers=[...new Set(row.tasks.map(task=>data.workers.find(worker=>worker.id===task.workerId)?.name.replace("（デモ）","")??"未設定"))];
   const ranks=row.tasks.filter(task=>task.status==="pending"&&task.equipmentId).map(task=>task.priority).sort((a,b)=>a-b).join(", ");

@@ -6,7 +6,14 @@ export const PROCESSES = [
   { code: "assembly", name: "型組", color: "#8772bb", tint: "#ece5fa" },
   { code: "trial", name: "トライ", color: "#d1785b", tint: "#fae5dc" },
 ] as const;
-export type ProcessCode = (typeof PROCESSES)[number]["code"];
+export type ProcessCode = string;
+export type ProcessDefinition = {code:string;name:string;color:string;tint:string;order?:number;active?:boolean};
+export function processCatalog(data:Pick<PlanData,"processes">):ProcessDefinition[] {
+ const catalog=new Map<string,ProcessDefinition>(PROCESSES.map((process,index)=>[process.code,{...process,order:index<3?(index+1)*10:1_000_000+index}]));
+ for(const process of data.processes??[])catalog.set(process.code,process);
+ return [...catalog.values()].sort((a,b)=>(a.order??40)-(b.order??40)||a.code.localeCompare(b.code));
+}
+export function bomProcessCatalog(data:Pick<PlanData,"processes">):ProcessDefinition[] {return processCatalog(data).filter(process=>process.code!=="assembly"&&process.code!=="trial");}
 export const BOM_PROCESSES = PROCESSES.filter(process => process.code !== "assembly" && process.code !== "trial");
 export type TaskStatus = "pending" | "running" | "completed";
 export type Segment = { start: string; end: string };
@@ -31,6 +38,7 @@ export type WorkLog = {
   editedBy: string;
 };
 export type PlanData = {
+  processes?:ProcessDefinition[];
   bomNames?: BomName[]; categories?: BomCategory[]; today?: string; bom?: BomItem[]; needsRecalculation?: boolean; products: Product[]; parts: Part[]; equipment: Equipment[]; workers: Worker[];
   tasks: Task[]; logs: WorkLog[]; calendar: Record<string, boolean>; revision: number;
 };
@@ -129,11 +137,13 @@ export function movePriority(tasks: Task[], taskId: string, rank: number): Task[
   return tasks.map((item) => ranks.has(item.id) ? { ...item, priority: ranks.get(item.id)! } : item);
 }
 export function schedule(data: PlanData, startStepMinutes:1|30=1): Task[] {
+  const processes=processCatalog(data);
   const tasks = data.tasks.map((task) => ({ ...task, segments: task.segments.map((item) => ({ ...item })) }));
   const byId = new Map(tasks.map((task) => [task.id, task])); const dependencies = new Map(tasks.map((task) => [task.id, new Set<string>()]));
   for (const part of data.parts) {
     const required = part.processes ?? PROCESSES.map((process) => process.code);
-    const chain = PROCESSES.filter((process) => required.includes(process.code)).map((process) => tasks.find((task) => task.partId === part.id && task.process === process.code));
+    if(required.some(code=>!processes.some(process=>process.code===code)))throw new Error(`${part.name} に未登録の工程があります。`);
+    const chain = processes.filter((process) => required.includes(process.code)).map((process) => tasks.find((task) => task.partId === part.id && task.process === process.code));
     if (chain.some((item) => !item)) throw new Error(`${part.name} の必要工程をすべて登録してください。`);
     for (let index = 1; index < chain.length; index++) dependencies.get(chain[index]!.id)!.add(chain[index - 1]!.id);
   }
@@ -143,8 +153,8 @@ export function schedule(data: PlanData, startStepMinutes:1|30=1): Task[] {
     for (const previous of tasks) {
       const part = data.parts.find(part => part.id === previous.partId);
       if (part?.productId !== owner.productId) continue;
-      if ((task.process === "assembly" && BOM_PROCESSES.some(process => process.code === previous.process)) ||
-          (task.process === "trial" && (previous.process === "assembly" || BOM_PROCESSES.some(process => process.code === previous.process)))) {
+      if ((task.process === "assembly" && !["assembly","trial"].includes(previous.process)) ||
+          (task.process === "trial" && previous.process!=="trial")) {
         dependencies.get(task.id)!.add(previous.id);
       }
     }
@@ -156,12 +166,13 @@ export function schedule(data: PlanData, startStepMinutes:1|30=1): Task[] {
   const resourceKey = (task: Task) => task.equipmentId || task.id;
   const busy = new Map(tasks.map((task) => [resourceKey(task), [] as Segment[]]));
   for (const task of tasks) {
+    if(!processes.some(process=>process.code===task.process))throw new Error("未登録の工程です。");
     const moldProcess = data.parts.some(part => part.id === task.partId && part.scope === "mold") && (task.process === "assembly" || task.process === "trial");
     const equipment = data.equipment.find((item) => item.id === task.equipmentId);
     if ((!moldProcess || task.equipmentId) && (!equipment || equipment.process !== task.process)) throw new Error("工程に対応する設備を選択してください。");
     if (!data.workers.some((worker) => worker.id === task.workerId)) throw new Error("担当者を選択してください。");
     if (task.status === "pending" && !validDuration(task.process,task.duration)) throw new Error("所要時間・日数を正しく入力してください（時間は30分単位）。");
-    if (task.overnight && (task.process === "assembly" || task.process === "trial")) throw new Error("型組・トライは夜間稼働を指定できません。");
+    if (task.overnight && !["machining","grinding","wire"].includes(task.process)) throw new Error("この工程は夜間稼働を指定できません。");
     if (task.fixed || task.status !== "pending") {
       if (!task.plannedStart || !task.plannedEnd) throw new Error("固定予定の開始・終了を指定してください。");
       busy.get(resourceKey(task))!.push(...(task.status === "completed" && task.actualStart && task.actualEnd ? [{ start: task.actualStart, end: task.actualEnd }] : task.segments.length ? task.segments : [{ start: task.plannedStart, end: task.plannedEnd }]));

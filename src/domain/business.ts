@@ -1,17 +1,18 @@
 import { validDuration } from "./duration.ts";
 import { z } from "zod";
-import { PROCESSES, type PlanData } from "./planning.ts";
-const processCode = z.enum(["machining", "grinding", "wire", "assembly", "trial"]);
+import { processCatalog, type PlanData } from "./planning.ts";
+const processCode = z.string().regex(/^(machining|grinding|wire|assembly|trial|custom_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/);
 const uuid = z.string().uuid();
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value, "日付が不正です");
 const instant = z.string().refine(value => Number.isFinite(Date.parse(value)), "日時が不正です");
 const text = z.string().trim().min(1).max(120);
 export const masterSchemas = {
  product: z.object({ id: uuid.optional(), name:text, customer:z.string().max(120), dueDate:date, notes:z.string().max(2000), archived:z.boolean() }),
- bom: z.object({ categoryId:uuid.optional(), id:uuid.optional(), productId:uuid, name:text, kind:z.enum(["plate","part"]), quantity:z.number().int().min(1).max(1000000), notes:z.string().max(2000), processes:z.array(z.enum(["machining","grinding","wire"])).min(1).max(3), archived:z.boolean() }),
+ bom: z.object({ categoryId:uuid.optional(), id:uuid.optional(), productId:uuid, name:text, kind:z.enum(["plate","part"]), quantity:z.number().int().min(1).max(1000000), notes:z.string().max(2000), processes:z.array(processCode.refine(code=>!["assembly","trial"].includes(code))).min(1).max(100), archived:z.boolean() }),
  category: z.object({ id:uuid.optional(), name:text, kind:z.enum(["plate","part"]), active:z.boolean() }),
  bomName: z.object({ id:uuid.optional(), categoryId:uuid, name:text, active:z.boolean() }),
  equipment:z.object({ id:uuid.optional(), name:text, process:processCode, active:z.boolean() }),
+ process:z.object({id:uuid.optional(),name:text,active:z.boolean()}),
  part:z.object({ id:uuid, name:text, quantity:z.number().int().positive(), archived:z.boolean() }),
  user:z.object({ id:uuid, name:text, role:z.enum(["admin","operator"]), active:z.boolean() }),
  calendar:z.object({ days:z.array(z.object({date,working:z.boolean(),label:z.string().max(120).optional()})).min(1).max(2000) }),
@@ -28,4 +29,4 @@ export function activePlan(data:PlanData):PlanData {
 export function remainingQuantity(data:PlanData,bomId:string):number {
  const item=data.bom?.find(x=>x.id===bomId); return item ? item.quantity-data.parts.filter(x=>x.bomId===bomId&&!x.archived).reduce((n,x)=>n+x.quantity,0) : 0;
 }
-export function orderedProcesses(selected:string[]) { return PROCESSES.filter(x=>selected.includes(x.code)).map(x=>x.code); }
+export function orderedProcesses(selected:string[],data:Pick<PlanData,"processes">={}) { return processCatalog(data).filter(x=>selected.includes(x.code)).map(x=>x.code); }
