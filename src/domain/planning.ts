@@ -88,14 +88,17 @@ function workingWindows(day: string, task: Task, calendar: PlanData["calendar"])
   const intervals = task.breakRun ? [[530, 1060]] : [[530, 720], [770, 900], [910, 1060]];
   return intervals.map(([start, end]) => ({ start: at(day, start), end: at(day, end) }));
 }
-function allocate(task: Task, startMs: number, calendar: PlanData["calendar"], busy: Segment[]): Segment[] {
+function allocate(task: Task, startMs: number, calendar: PlanData["calendar"], busy: Segment[], startStepMinutes=1): Segment[] {
   let candidate = startMs;
   for (let attempt = 0; attempt < 1000; attempt++) {
     let remaining = task.duration; const segments: Segment[] = []; let blockedUntil: number | undefined;
     for (let offset = 0; offset < 366 && remaining > 0; offset++) {
       const day = addDays(dateKey(candidate), offset);
       for (const window of workingWindows(day, task, calendar)) {
-        const start = Math.max(candidate, new Date(window.start).getTime()); const limit = new Date(window.end).getTime();
+        const available = Math.max(candidate, new Date(window.start).getTime());
+        // Align only the task's first start; break/day continuation preserves processing time.
+        const start = segments.length ? available : Math.ceil(available / (startStepMinutes * MINUTE)) * startStepMinutes * MINUTE;
+        const limit = new Date(window.end).getTime();
         if (limit <= start) continue;
         const end = Math.min(limit, start + remaining * MINUTE);
         const segment = { start: new Date(start).toISOString(), end: new Date(end).toISOString() };
@@ -125,7 +128,7 @@ export function movePriority(tasks: Task[], taskId: string, rank: number): Task[
   const ranks = new Map(queue.map((item, index) => [item.id, index + 1]));
   return tasks.map((item) => ranks.has(item.id) ? { ...item, priority: ranks.get(item.id)! } : item);
 }
-export function schedule(data: PlanData): Task[] {
+export function schedule(data: PlanData, startStepMinutes:1|30=1): Task[] {
   const tasks = data.tasks.map((task) => ({ ...task, segments: task.segments.map((item) => ({ ...item })) }));
   const byId = new Map(tasks.map((task) => [task.id, task])); const dependencies = new Map(tasks.map((task) => [task.id, new Set<string>()]));
   for (const part of data.parts) {
@@ -176,7 +179,7 @@ export function schedule(data: PlanData): Task[] {
       if (!Number.isFinite(earliest)) throw new Error("開始日時を入力してください。");
       if (task.fixed && task.status === "pending" && earliest > new Date(task.plannedStart).getTime()) throw new Error("固定予定より前に先行工程を終えられません。固定を解除するか順位を変更してください。");
       if (!task.fixed && task.status === "pending") {
-        task.segments = allocate(task, earliest, data.calendar, busy.get(resourceKey(task))!);
+        task.segments = allocate(task, earliest, data.calendar, busy.get(resourceKey(task))!, startStepMinutes);
         task.plannedStart = task.segments[0].start; task.plannedEnd = task.segments.at(-1)!.end;
         busy.get(resourceKey(task))!.push(...task.segments);
       }
@@ -195,10 +198,10 @@ export function taskConflicts(tasks: Task[]): [string, string][] {
 }
 
 
-export function placeAtRequestedStart(task: Task, calendar: PlanData["calendar"]): Task {
+export function placeAtRequestedStart(task: Task, calendar: PlanData["calendar"], startStepMinutes:1|30=1): Task {
   if (!validDuration(task.process,task.duration)) throw new Error("所要時間・日数を正しく入力してください（時間は30分単位）。");
   const startMs = new Date(task.earliestStart).getTime();
   if (!Number.isFinite(startMs)) throw new Error("開始日時を入力してください。");
-  const segments = allocate(task, startMs, calendar, []);
+  const segments = allocate(task, startMs, calendar, [], startStepMinutes);
   return { ...task, plannedStart: segments[0].start, plannedEnd: segments.at(-1)!.end, segments };
 }
