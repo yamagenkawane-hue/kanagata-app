@@ -25,8 +25,11 @@ export async function POST(request:Request){
    if(!input.entity || !Object.hasOwn(masterSchemas,input.entity))throw new BusinessError("操作対象が不正です");
    const entity=input.entity as keyof typeof masterSchemas; let payload=masterSchemas[entity].parse(input.payload);
    if(entity==="process"){
-    const data=await readPlanning(context.client);
-    if(!data.processes)throw new BusinessError("工程追加のDB設定が必要です。SupabaseのSQL Editorで 202610080001_custom_processes.sql を実行してください。",503);
+    const schema=await context.client.from("process_definitions").select("code").limit(0);
+    if(schema.error){
+     if(["PGRST205","PGRST204","42P01"].includes(schema.error.code))throw new BusinessError("工程追加のDB設定が必要です。SupabaseのSQL Editorで 202610080001_custom_processes.sql を実行してください。",503);
+     throw new BusinessError("工程のDB設定を確認できませんでした。接続を確認してください。",503);
+    }
    }
    if(entity==="bom"){
     const bom=masterSchemas.bom.parse(payload);const data=await readPlanning(context.client);
