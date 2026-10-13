@@ -55,7 +55,7 @@ export async function POST(request:Request){
    rpc="save_actual";args={payload:z.object({id:z.string().uuid()}).parse(input.payload),expected:input.expected,remove_log:true};
   }else {rpc="seed_test_data";args={expected:input.expected};}
   const result=await context.client.rpc(rpc,args);
-  if(result.error)throw new BusinessError(result.error.message,result.error.code==="40001"?409:result.error.code==="42501"?403:400);
+  if(result.error)throw new BusinessError(result.error.message,["PT409","40001"].includes(result.error.code)?409:result.error.code==="42501"?403:400);
   return NextResponse.json({data:await readPlanning(context.client)},{headers});
  }catch(cause){return errorResponse(cause);}
 }

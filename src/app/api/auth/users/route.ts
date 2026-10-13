@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     if (saved.error) {
       const rollback = await admin.auth.admin.deleteUser(created.data.user.id);
       if (rollback.error) throw new BusinessError("プロフィール登録に失敗しました。作成されたAuthアカウントの確認が必要です", 503);
-      throw new BusinessError(saved.error.code === "40001" ? "他の利用者が更新しました。再読み込みしてください" : "利用者登録に失敗しました。追加SQLの適用と初回登録状態を確認してください", saved.error.code === "40001" ? 409 : 400);
+      throw new BusinessError(["PT409", "40001"].includes(saved.error.code) ? "他の利用者が更新しました。再読み込みしてください" : "利用者登録に失敗しました。追加SQLの適用と初回登録状態を確認してください", ["PT409", "40001"].includes(saved.error.code) ? 409 : 400);
     }
     return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
   } catch (cause) {
