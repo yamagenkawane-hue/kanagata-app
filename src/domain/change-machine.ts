@@ -1,4 +1,4 @@
-import {renumber,movePriority,schedule,type PlanData} from "./planning.ts";
+import {renumber,movePriority,schedule,placeAtRequestedStart,overlaps,type PlanData} from "./planning.ts";
 import {propagateOrder} from "./reorder-tasks.ts";
 
 export function changeMachine(data:PlanData,id:string,equipmentId:string,start:string):PlanData{
@@ -13,5 +13,11 @@ export function changeMachine(data:PlanData,id:string,equipmentId:string,start:s
  tasks=renumber(renumber(tasks,source.equipmentId),equipmentId);
  tasks=movePriority(tasks,id,rank);
  tasks=propagateOrder(data,tasks,id);
- return {...data,tasks:schedule({...data,tasks},30).map(task=>task.id===id?task:{...task,earliestStart:data.tasks.find(old=>old.id===task.id)!.earliestStart})};
+ const placed=placeAtRequestedStart(tasks.find(task=>task.id===id)!,data.calendar,30);
+ const free=!data.tasks.some(task=>task.id!==id&&task.equipmentId===equipmentId&&placed.segments.some(segment=>(task.status==="completed"&&task.actualStart&&task.actualEnd?[{start:task.actualStart,end:task.actualEnd}]:task.segments).some(other=>overlaps(segment,other))));
+ // A machine queue may contain a long earlier job interrupted by holidays or
+ // a fixed booking. Reserve a genuinely free drop interval before recomputing
+ // that queue, so its priority dependencies cannot push this job out of the gap.
+ if(free)tasks=tasks.map(task=>task.id===id?{...placed,fixed:true,manualOverride:true}:task);
+ return {...data,tasks:schedule({...data,tasks},30).map(task=>task.id===id?{...task,fixed:source.fixed,manualOverride:false}:{...task,earliestStart:data.tasks.find(old=>old.id===task.id)!.earliestStart})};
 }
