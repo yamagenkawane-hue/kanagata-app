@@ -15,7 +15,7 @@ export async function businessRequest(body:unknown,request:typeof fetch=fetch,ti
  try {
   return await Promise.race([deadline,(async()=>{
    let response:Response;
-   try {response=await request("/api/business",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:controller.signal});}
+   try {response=await request("/api/business",{method:body===undefined?"GET":"POST",headers:body===undefined?undefined:{"Content-Type":"application/json"},body:body===undefined?undefined:JSON.stringify(body),signal:controller.signal});}
    catch {throw uncertain();}
    let result;
    try {result=await response.json();}catch {throw uncertain();}

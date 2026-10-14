@@ -17,3 +17,5 @@
 .task-bar.reorderable-bar{cursor:grab}.task-bar.reorderable-bar:active{cursor:grabbing}.task-bar.dragging-bar{opacity:.45}.task-bar.drop-before{box-shadow:-5px 0 0 #176541;outline:2px solid #176541}.task-bar.drop-after{box-shadow:5px 0 0 #176541;outline:2px solid #176541}
 .drag-time-marker{position:absolute;top:0;bottom:0;width:3px;background:#176541;z-index:8;pointer-events:none}
 .preview-table .changed-fields{color:#246347;font-weight:700}
+
+.pan-scroll{cursor:grab;touch-action:pan-y}.pan-scroll.panning{cursor:grabbing;user-select:none}.pan-scroll .task-bar{cursor:grab}
