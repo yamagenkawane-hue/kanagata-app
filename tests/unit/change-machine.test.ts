@@ -5,10 +5,10 @@ import {changeMachine} from "../../src/domain/change-machine.ts";
 import {taskConflicts} from "../../src/domain/planning.ts";
 import {at,schedule,type PlanData,type Task} from "../../src/domain/planning.ts";
 
-test("drop in a free break interval preserves time despite an earlier machine queue job",()=>{
+test("drop preserves a free interval before a later machine booking",()=>{
  const day="2026-10-14";
  const make=(id:string,equipmentId:string,duration:number,overnight:boolean,start:number):Task=>({id,partId:id,equipmentId,process:"wire",workerId:"w",duration,overnight,breakRun:false,earliestStart:at(day,start),plannedStart:"",plannedEnd:"",segments:[],status:"pending",fixed:false,priority:1});
- const input:PlanData={products:[{id:"p",name:"型",customer:"",dueDate:day,notes:""}],parts:["a","b"].map(id=>({id,productId:"p",name:id,quantity:1,drawingNumber:"",processes:["wire"]})),equipment:[{id:"one",name:"1",process:"wire"},{id:"two",name:"2",process:"wire"}],workers:[{id:"w",name:"担当"}],tasks:[make("a","one",30,true,720),make("b","two",240,false,540)],calendar:{[day]:true},logs:[],revision:1};
+ const input:PlanData={products:[{id:"p",name:"型",customer:"",dueDate:day,notes:""}],parts:["a","b"].map(id=>({id,productId:"p",name:id,quantity:1,drawingNumber:"",processes:["wire"]})),equipment:[{id:"one",name:"1",process:"wire"},{id:"two",name:"2",process:"wire"}],workers:[{id:"w",name:"担当"}],tasks:[make("a","one",30,true,720),make("b","two",240,false,780)],calendar:{[day]:true},logs:[],revision:1};
  const data={...input,tasks:schedule(input,30)};
  const changed=changeMachine(data,"a","two",at(day,720));
  assert.equal(changed.tasks.find(task=>task.id==="a")!.plannedStart,at(day,720));

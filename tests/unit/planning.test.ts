@@ -14,12 +14,12 @@ test("日またぎ実績を日本時間で分割する", () => {
   assert.deepEqual(workMinutesByDay(log), [{ date: "2026-09-30", minutes: 30 }, { date: "2026-10-01", minutes: 30 }]);
 });
 test("終了が開始以前の実績を拒否する", () => { assert.throws(() => calculateWorkMinutes(at("2026-09-30", 600), at("2026-09-30", 600)), /終了時刻/); });
-test("8:50開始の240分タスクは昼休みをまたぎ13:40終了", () => {
-  const source = singlePart(); const tasks = schedule(source); assert.equal(tasks[0].plannedStart, at("2026-09-30",530)); assert.equal(tasks[0].plannedEnd, at("2026-09-30",820)); assert.equal(tasks[0].segments.length,2);
+test("8:50開始の240分加工は休憩で止めず12:50終了", () => {
+  const source = singlePart(); const tasks = schedule(source); assert.equal(tasks[0].plannedStart, at("2026-09-30",530)); assert.equal(tasks[0].plannedEnd, at("2026-09-30",770)); assert.equal(tasks[0].segments.length,1);
 });
-test("通常工程は会社休日を繰り越す", () => {
+test("開始済みの加工は勤務終了後も所要時間分継続", () => {
   const source = singlePart(); source.tasks[0].earliestStart=at("2026-10-02",1030); source.tasks[0].duration=120;
-  const result=schedule(source); assert.equal(result[0].plannedEnd, at("2026-10-05",620));
+  const result=schedule(source); assert.equal(result[0].plannedEnd, at("2026-10-02",1150));
 });
 test("夜間指定は休日も連続して動く", () => {
   const source=singlePart(); source.tasks[0].earliestStart=at("2026-10-02",1380); source.tasks[0].duration=120; source.tasks[0].overnight=true;

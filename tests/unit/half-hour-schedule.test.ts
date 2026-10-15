@@ -13,7 +13,7 @@ test("half-hour starts align all movable stages and preserve protected tasks",()
  assert.deepEqual(schedule({...data,tasks:result},30),result);
 });
 
-test("align first start after breaks but retain exact duration through continuation",()=>{
+test("align processing starts and keep elapsed duration continuous",()=>{
  const data=createDemo();const task={...data.tasks[0],process:"machining" as const,duration:60,earliestStart:at("2026-09-30",770),overnight:false,breakRun:false};
  const lunch=placeAtRequestedStart(task,data.calendar,30);
  assert.equal(lunch.plannedStart,at("2026-09-30",780));
@@ -21,6 +21,6 @@ test("align first start after breaks but retain exact duration through continuat
  assert.equal(afternoon.plannedStart,at("2026-09-30",930));
  const crossing=placeAtRequestedStart({...task,duration:240,earliestStart:at("2026-09-30",530)},data.calendar,30);
  assert.equal(crossing.plannedStart,at("2026-09-30",540));
- assert.equal(crossing.plannedEnd,at("2026-09-30",830));
- assert.equal(crossing.segments[1].start,at("2026-09-30",770));
+ assert.equal(crossing.plannedEnd,at("2026-09-30",780));
+ assert.equal(crossing.segments.length,1);
 });

@@ -108,7 +108,8 @@ function allocate(task: Task, startMs: number, calendar: PlanData["calendar"], b
         const start = segments.length ? available : Math.ceil(available / (startStepMinutes * MINUTE)) * startStepMinutes * MINUTE;
         const limit = new Date(window.end).getTime();
         if (limit <= start) continue;
-        const end = Math.min(limit, start + remaining * MINUTE);
+        const continuous = ["machining", "grinding", "wire"].includes(task.process);
+        const end = continuous ? start + remaining * MINUTE : Math.min(limit, start + remaining * MINUTE);
         const segment = { start: new Date(start).toISOString(), end: new Date(end).toISOString() };
         const conflict = busy.filter((item) => overlaps(item, segment)).sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0];
         if (conflict) { blockedUntil = new Date(conflict.end).getTime(); break; }
