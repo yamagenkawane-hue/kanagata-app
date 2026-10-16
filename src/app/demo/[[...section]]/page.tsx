@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
 import PlanningBoard from "@/components/planning/planning-board";
+import MoldDetail from "@/components/business/mold-detail";
 import Management from "@/components/business/management";
 import { createDemo } from "@/domain/demo";
 import { PROCESSES } from "@/domain/planning";
 export default async function Page({params}:{params:Promise<{section?:string[]}>}){
  const {section=[]}=await params;const data=createDemo();const kind=section[0];
  if(!kind)return <PlanningBoard />;
+ if(kind==="mold-details"){const product=data.products.find(item=>item.id===section[1]);if(section.length!==2||!product)notFound();return <MoldDetail data={data} product={product} basePath="/demo" />;}
  if(kind==="process"||kind==="machines"){
   if(section.length!==2||(kind==="process"?!PROCESSES.some(x=>x.code===section[1]):!data.equipment.some(x=>x.id===section[1])))notFound();
   return <PlanningBoard processFilter={kind==="process"?section[1]:""} machineFilter={kind==="machines"?section[1]:""} />;
