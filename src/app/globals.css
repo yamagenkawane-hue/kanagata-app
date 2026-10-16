@@ -19,4 +19,3 @@
 .preview-table .changed-fields{color:#246347;font-weight:700}
 
 .pan-scroll{cursor:grab;touch-action:pan-y}.pan-scroll.panning{cursor:grabbing;user-select:none}.pan-scroll .task-bar{cursor:grab}
-.heading-columns.mold-name-columns,.task-columns.mold-name-columns{grid-template-columns:minmax(0,1fr) auto;padding:0 15px;gap:12px}.heading-columns.mold-name-columns>span{padding-left:0}.gantt-mold-cell{min-width:0;display:flex;flex-direction:column;gap:5px}.gantt-mold-links{display:flex;flex-wrap:wrap;gap:4px 12px}.gantt-mold-links a{font-size:12px;font-weight:600}.gantt-mold-cell small{color:#899680;font-size:10px}.mold-name-columns .task-edit-button{position:static;margin:0}
