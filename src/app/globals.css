@@ -19,4 +19,5 @@
 .preview-table .changed-fields{color:#246347;font-weight:700}
 
 .pan-scroll{cursor:grab;touch-action:pan-y}.pan-scroll.panning{cursor:grabbing;user-select:none}.pan-scroll .task-bar{cursor:grab}
+button.summary-card{width:100%;text-align:left;color:inherit}button.summary-card:hover{border-color:#82aa91;box-shadow:0 2px 8px #244b3320}
 .mold-summary{display:flex;gap:48px;padding:20px;background:white;border:1px solid var(--line);border-radius:8px}.mold-summary dt{font-size:12px;color:#7a8873}.mold-summary dd{margin:8px 0 0;font-size:18px;font-weight:600}
