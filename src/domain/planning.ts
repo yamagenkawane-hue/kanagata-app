@@ -17,10 +17,10 @@ export function bomProcessCatalog(data:Pick<PlanData,"processes">):ProcessDefini
 export const BOM_PROCESSES = PROCESSES.filter(process => process.code !== "assembly" && process.code !== "trial");
 export type TaskStatus = "pending" | "running" | "completed";
 export type Segment = { start: string; end: string };
-export type Product = { archived?: boolean; id: string; name: string; customer: string; dueDate: string; notes: string };
+export type Product = { plateWidthMm?:number|null;plateLengthMm?:number|null; archived?: boolean; id: string; name: string; customer: string; dueDate: string; notes: string };
 export type BomCategory = { id: string; name: string; kind: "plate" | "part"; active: boolean };
 export type BomName = { id: string; categoryId: string; name: string; active: boolean };
-export type BomItem = { widthMm?:number|null; lengthMm?:number|null; categoryId?: string; id: string; productId: string; name: string; kind: "plate" | "part"; quantity: number; notes: string; processes: ProcessCode[]; archived: boolean };
+export type BomItem = { individualWidth?:boolean;individualLength?:boolean; widthMm?:number|null; lengthMm?:number|null; categoryId?: string; id: string; productId: string; name: string; kind: "plate" | "part"; quantity: number; notes: string; processes: ProcessCode[]; archived: boolean };
 export type Part = { scope?: "part" | "mold"; bomId?: string; processes?: ProcessCode[]; archived?: boolean; id: string; productId: string; name: string; quantity: number; drawingNumber: string };
 export type Equipment = { active?: boolean; id: string; name: string; process: ProcessCode };
 export type Worker = { role?: "admin" | "operator"; active?: boolean; id: string; name: string };

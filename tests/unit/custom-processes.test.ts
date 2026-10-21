@@ -115,5 +115,28 @@ test("name-only process registration, dynamic BOM, scheduling, CRUD, authorizati
   await db.query("update public.bom_items set width_mm=200 where id=$1",[snapshotPlate.id]);
   const snapshot=(await db.query<{width:string}>("select plate_width_mm::text width from public.parts where id=$1",[snapshotId])).rows[0];
   assert.equal(snapshot.width,"100");
+  await db.exec(await readFile(new URL("../../supabase/migrations/202610210003_common_plate_size.sql",import.meta.url),"utf8"));
+  await db.exec(`set role authenticated;set request.jwt.claim.sub='${admin}'`);
+  await save("bom",{...plate,processes:["machining","grinding","wire"],widthMm:100,lengthMm:230,individualWidth:false,individualLength:false});
+  assert.equal((await read()).products.find(product=>product.id===productId)!.plateWidthMm,100);
+  const sharedData=await read();
+  const dsName=sharedData.bomNames!.find(name=>name.name.startsWith("DS1"))!.name;
+  const sbName=sharedData.bomNames!.find(name=>name.name.startsWith("SB"))!.name;
+  const dsId=randomUUID(),sbId=randomUUID();
+  await save("bom",{...plate,id:dsId,name:dsName,processes:["machining","grinding","wire"],quantity:1,individualWidth:false,individualLength:false});
+  let ds=(await read()).bom!.find(item=>item.id===dsId)!;
+  assert.equal(ds.widthMm,100);assert.equal(ds.lengthMm,230);
+  await save("bom",{...ds,widthMm:150,individualWidth:true,individualLength:false});
+  await save("bom",{...plate,id:sbId,name:sbName,quantity:2,processes:["machining","grinding","wire"],widthMm:80,lengthMm:180,individualWidth:true,individualLength:true});
+  await save("bom",{...plate,processes:["machining","grinding","wire"],widthMm:110,lengthMm:250,individualWidth:false,individualLength:false});
+  const sharedSaved=await read();ds=sharedSaved.bom!.find(item=>item.id===dsId)!;
+  assert.equal(ds.widthMm,150);assert.equal(ds.lengthMm,250);
+  const sb=sharedSaved.bom!.find(item=>item.id===sbId)!;assert.equal(sb.widthMm,80);assert.equal(sb.lengthMm,180);
+  await save("bom",{...ds,individualWidth:false,widthMm:110});
+  assert.equal((await read()).bom!.find(item=>item.id===dsId)!.widthMm,110);
+  const previousRevision=(await read()).revision;
+  await db.exec(`set request.jwt.claim.sub='${operator}'`);
+  await assert.rejects(()=>save("bom",{...plate,widthMm:999,individualWidth:false}),/管理者/);
+  assert.equal((await read()).revision,previousRevision);
  }finally{await db.close();}
 });
