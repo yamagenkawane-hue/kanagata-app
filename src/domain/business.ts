@@ -7,6 +7,7 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => Number.isFi
 const instant = z.string().refine(value => Number.isFinite(Date.parse(value)), "日時が不正です");
 const text = z.string().trim().min(1).max(120);
 export const masterSchemas = {
+ standardPlates:z.object({productId:uuid,categoryId:uuid,widthMm:z.number().positive().max(10000),lengthMm:z.number().positive().max(10000)}),
  product: z.object({ id: uuid.optional(), name:text, customer:z.string().max(120), dueDate:date, notes:z.string().max(2000), archived:z.boolean() }),
  bom: z.object({ categoryId:uuid.optional(), id:uuid.optional(), productId:uuid, individualWidth:z.boolean().optional(),individualLength:z.boolean().optional(), widthMm:z.number().positive().max(10000).nullable().optional(),lengthMm:z.number().positive().max(10000).nullable().optional(), name:text, kind:z.enum(["plate","part"]), quantity:z.number().int().min(1).max(1000000), notes:z.string().max(2000), processes:z.array(processCode.refine(code=>!["assembly","trial"].includes(code))).max(100), archived:z.boolean() }),
  estimates:z.object({machiningMinutes:z.number().int().min(30).max(10080).multipleOf(30),grindingMinutes:z.number().int().min(30).max(10080).multipleOf(30),largeGrindingMinutes:z.number().int().min(30).max(10080).multipleOf(30),wireMinutes:z.number().int().min(30).max(10080).multipleOf(30),largeThresholdMm:z.number().positive().max(10000)}),

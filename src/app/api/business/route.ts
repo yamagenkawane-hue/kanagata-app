@@ -63,6 +63,7 @@ export async function POST(request:Request){
    rpc="save_actual";args={payload:z.object({id:z.string().uuid()}).parse(input.payload),expected:input.expected,remove_log:true};
   }else {rpc="seed_test_data";args={expected:input.expected};}
   const result=await context.client.rpc(rpc,args);
+  if(result.error&&input.entity==="standardPlates"&&result.error.message.includes("操作対象が不正"))throw new BusinessError("標準プレート登録のDB設定が必要です。202610210004_standard_plate_bom.sql を実行してください。",503);
   if(result.error)throw new BusinessError(result.error.message,["PT409","40001"].includes(result.error.code)?409:result.error.code==="42501"?403:400);
   return NextResponse.json({data:await readPlanning(context.client)},{headers});
  }catch(cause){return errorResponse(cause);}
