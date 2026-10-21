@@ -11,19 +11,25 @@ export default function BomFields({ row, products, items, categories = DEFAULT_B
   const kind = categories.find(category => category.id === categoryId)?.kind ?? row.kind ?? "part";
   const [productId, setProductId] = useState(row.productId ?? products.find(item => !item.archived)?.id ?? "");
   const [name, setName] = useState(row.name ?? "");
+  const [bulk,setBulk] = useState(false);
+  const plateCategory=categories.find(category=>category.active&&category.kind==="plate");
   const options = availableBomNames(names, items, productId, categoryId, kind, row.id);
   const legacyName = Boolean(row.id) && categoryId === originalCategoryId && row.name === name && name && !options.includes(name);
   return <>
-    <label>区分<select name="categoryId" value={categoryId} required onChange={event => { setCategoryId(event.target.value); setName(""); }}><option value="">区分を選択</option>{categories.filter(category => category.active || (Boolean(row.id) && category.id === originalCategoryId)).map(category => <option key={category.id} value={category.id}>{category.name}{!category.active && "（停止中）"}</option>)}</select></label>
+    {!row.id&&<label className="checkbox"><input name="standardPlates" type="checkbox" checked={bulk} disabled={!plateCategory} onChange={event=>{setBulk(event.target.checked);if(event.target.checked&&plateCategory){setCategoryId(plateCategory.id);setName("");}}} />プレート一括登録（PB・PP・SB・SP・DB1・DP）</label>}
+    {bulk&&<input type="hidden" name="categoryId" value={categoryId} />}
+    <label>区分<select disabled={bulk} name="categoryId" value={categoryId} required onChange={event => { setCategoryId(event.target.value); setName(""); }}><option value="">区分を選択</option>{categories.filter(category => category.active || (Boolean(row.id) && category.id === originalCategoryId)).map(category => <option key={category.id} value={category.id}>{category.name}{!category.active && "（停止中）"}</option>)}</select></label>
     <input type="hidden" name="kind" value={kind} />
-    <label>名称<select name="name" value={name} onChange={event => setName(event.target.value)} required><option value="">名称を選択</option>{legacyName && <option value={name}>{name}（現在の登録）</option>}{options.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
-    {!options.length && !legacyName && <p role="status">選択できる名称がありません。名称リストへ登録してください。プレートは同じ金型の登録済み名称を除外します。</p>}
+    <label>名称<select name="name" disabled={bulk} value={name} onChange={event => setName(event.target.value)} required><option value="">名称を選択</option>{legacyName && <option value={name}>{name}（現在の登録）</option>}{options.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
+    {!bulk && !options.length && !legacyName && <p role="status">選択できる名称がありません。名称リストへ登録してください。プレートは同じ金型の登録済み名称を除外します。</p>}
     <label>金型<select name="productId" value={productId} onChange={event => { setProductId(event.target.value); setName(""); }} disabled={Boolean(row.id)} required>{products.filter(item => !item.archived || item.id === row.productId).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
     {row.id && <input type="hidden" name="productId" value={productId} />}
-    {kind==="plate"&&<PlateSizeFields key={`${productId}-${categoryId}-${name}`} row={row} product={products.find(product=>product.id===productId)} name={name} />}
-    <label>必要数量<input name="quantity" type="number" min={1} defaultValue={row.quantity ?? 1} required /></label>
-    {<fieldset><legend>必要工程</legend>{processes.map(item => {const mandatory=kind==="plate"&&["machining","grinding","wire"].includes(item.code);return <label className="checkbox" key={`${kind}-${item.code}`}><input name="processes" type="checkbox" value={item.code} defaultChecked={mandatory||row.processes?.includes(item.code)} disabled={mandatory||(item.active===false&&!row.processes?.includes(item.code))} />{mandatory&&<input type="hidden" name="processes" value={item.code} />}{item.name}{item.active===false&&"（停止中）"}</label>;})}</fieldset>}
+    {bulk&&<div className="form-row" key={productId}><label>幅（mm）<input name="widthMm" type="number" min="0.1" max="10000" step="0.1" defaultValue={products.find(product=>product.id===productId)?.plateWidthMm??""} required /></label><label>長さ（mm）<input name="lengthMm" type="number" min="0.1" max="10000" step="0.1" defaultValue={products.find(product=>product.id===productId)?.plateLengthMm??""} required /></label></div>}
+    {kind==="plate"&&!bulk&&<PlateSizeFields key={`${productId}-${categoryId}-${name}`} row={row} product={products.find(product=>product.id===productId)} name={name} />}
+    {bulk&&<p className="help-text">各1枚、マシニング・自動研磨・ワイヤーの3工程で登録します。登録済みの同名プレートは追加しません。共通サイズは既存の共通寸法対象にも反映します。数量・個別サイズは登録後に編集できます。</p>}
+    {!bulk&&<label>必要数量<input name="quantity" type="number" min={1} defaultValue={row.quantity ?? 1} required /></label>}
+    {!bulk&&<fieldset><legend>必要工程</legend>{processes.map(item => {const mandatory=kind==="plate"&&["machining","grinding","wire"].includes(item.code);return <label className="checkbox" key={`${kind}-${item.code}`}><input name="processes" type="checkbox" value={item.code} defaultChecked={mandatory||row.processes?.includes(item.code)} disabled={mandatory||(item.active===false&&!row.processes?.includes(item.code))} />{mandatory&&<input type="hidden" name="processes" value={item.code} />}{item.name}{item.active===false&&"（停止中）"}</label>;})}</fieldset>}
     {kind !== "plate" && <p className="help-text">購入品・外注品など社内加工を行わない項目は、必要工程をすべて外して登録できます。社内加工なしの項目はガント登録対象外です。</p>}
-    {kind === "plate" && <p className="help-text">プレートはマシニング・自動研磨・ワイヤーが必須です。追加工程は必要なものを選択します。型組・トライは金型単位で別途登録します。</p>}
+    {kind === "plate" && !bulk && <p className="help-text">プレートはマシニング・自動研磨・ワイヤーが必須です。追加工程は必要なものを選択します。型組・トライは金型単位で別途登録します。</p>}
   </>;
 }
