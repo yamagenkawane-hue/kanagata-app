@@ -24,6 +24,10 @@ export async function POST(request:Request){
   if(input.operation==="master"){
    if(!input.entity || !Object.hasOwn(masterSchemas,input.entity))throw new BusinessError("操作対象が不正です");
    const entity=input.entity as keyof typeof masterSchemas; let payload=masterSchemas[entity].parse(input.payload);
+   if(entity==="estimates"||(entity==="bom"&&(Object.hasOwn(payload,"widthMm")||Object.hasOwn(payload,"lengthMm")))){
+    const schema=entity==="estimates"?await context.client.from("estimate_settings").select("id").limit(0):await context.client.from("bom_items").select("width_mm,length_mm").limit(0);
+    if(schema.error)throw new BusinessError("プレート概算のDB設定が必要です。202610210002_plate_estimates.sql を実行してください。",503);
+   }
    if(entity==="process"){
     const schema=await context.client.from("process_definitions").select("code").limit(0);
     if(schema.error){

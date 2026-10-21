@@ -4,7 +4,8 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import { at, bomProcessCatalog, processCatalog, schedule, type PlanData, type Task } from "../../src/domain/planning.ts";
-import { masterSchemas, orderedProcesses } from "../../src/domain/business.ts";
+import {autoPlatePlans} from "../../src/domain/estimates.ts";
+import { masterSchemas, orderedProcesses, planSchema } from "../../src/domain/business.ts";
 import { ganttRows } from "../../src/domain/gantt-rows.ts";
 
 test("name-only process registration, dynamic BOM, scheduling, CRUD, authorization and rollback",async()=>{
@@ -83,5 +84,36 @@ test("name-only process registration, dynamic BOM, scheduling, CRUD, authorizati
   assert.deepEqual((await read()).bom!.find(item=>item.id===bom.id)!.processes,[]);
   await save("bom",{...bom,processes:["wire"]});
   assert.deepEqual((await read()).bom!.find(item=>item.id===bom.id)!.processes,["wire"]);
+  await db.exec("reset role");
+  await db.exec(await readFile(new URL("../../supabase/migrations/202610210002_plate_estimates.sql",import.meta.url),"utf8"));
+  await db.exec(`set role authenticated;set request.jwt.claim.sub='${admin}'`);
+  await save("bom",{...bom,processes:["wire"],widthMm:100,lengthMm:230});
+  assert.equal((await read()).bom!.find(item=>item.id===bom.id)!.widthMm,100);
+  assert.equal((await read()).bom!.find(item=>item.id===bom.id)!.lengthMm,230);
+  const estimates={machiningMinutes:300,grindingMinutes:240,largeGrindingMinutes:480,wireMinutes:480,largeThresholdMm:300};
+  await save("estimates",estimates);assert.deepEqual((await read()).estimates,estimates);
+  const estimateRevision=(await read()).revision;
+  await assert.rejects(()=>save("estimates",{...estimates,wireMinutes:31}),/check constraint/);
+  assert.equal((await read()).revision,estimateRevision);
+  await db.exec(`set request.jwt.claim.sub='${operator}'`);
+  await assert.rejects(()=>save("estimates",estimates),/管理者/);
+  await db.exec(`set request.jwt.claim.sub='${admin}'`);
+  assert.equal((await read()).revision,estimateRevision);
+  await save("bom",{...plate,processes:["machining","grinding","wire"],widthMm:100,lengthMm:230});
+  const autoSource=await read();
+  const autoResult=autoPlatePlans({...autoSource,bom:autoSource.bom!.filter(item=>item.id===plateId)},productId,at("2026-10-05",540),admin);
+  const parsedPlan=planSchema.parse({parts:autoResult.parts,tasks:autoResult.tasks});
+  await db.query("select public.commit_plan($1,$2,false)",[JSON.stringify(parsedPlan),autoSource.revision]);
+  const autoSaved=await read();
+  assert.equal(autoSaved.parts.filter(part=>part.bomId===plateId).length,2);
+  assert.equal(autoSaved.tasks.filter(task=>autoSaved.parts.some(part=>part.id===task.partId&&part.bomId===plateId)).length,6);
+  await db.exec("reset role");
+  const snapshotPlate=(await db.query<{id:string;product_id:string}>("select id,product_id from public.bom_items where kind='plate' limit 1")).rows[0];
+  await db.query("update public.bom_items set width_mm=100,length_mm=230 where id=$1",[snapshotPlate.id]);
+  const snapshotId=randomUUID();
+  await db.query("insert into public.parts(id,product_id,name,quantity,bom_id,required_processes) values($1,$2,'snapshot',1,$3,array['machining','grinding','wire'])",[snapshotId,snapshotPlate.product_id,snapshotPlate.id]);
+  await db.query("update public.bom_items set width_mm=200 where id=$1",[snapshotPlate.id]);
+  const snapshot=(await db.query<{width:string}>("select plate_width_mm::text width from public.parts where id=$1",[snapshotId])).rows[0];
+  assert.equal(snapshot.width,"100");
  }finally{await db.close();}
 });

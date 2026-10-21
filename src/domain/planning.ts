@@ -20,7 +20,7 @@ export type Segment = { start: string; end: string };
 export type Product = { archived?: boolean; id: string; name: string; customer: string; dueDate: string; notes: string };
 export type BomCategory = { id: string; name: string; kind: "plate" | "part"; active: boolean };
 export type BomName = { id: string; categoryId: string; name: string; active: boolean };
-export type BomItem = { categoryId?: string; id: string; productId: string; name: string; kind: "plate" | "part"; quantity: number; notes: string; processes: ProcessCode[]; archived: boolean };
+export type BomItem = { widthMm?:number|null; lengthMm?:number|null; categoryId?: string; id: string; productId: string; name: string; kind: "plate" | "part"; quantity: number; notes: string; processes: ProcessCode[]; archived: boolean };
 export type Part = { scope?: "part" | "mold"; bomId?: string; processes?: ProcessCode[]; archived?: boolean; id: string; productId: string; name: string; quantity: number; drawingNumber: string };
 export type Equipment = { active?: boolean; id: string; name: string; process: ProcessCode };
 export type Worker = { role?: "admin" | "operator"; active?: boolean; id: string; name: string };
@@ -38,6 +38,7 @@ export type WorkLog = {
   editedBy: string;
 };
 export type PlanData = {
+  estimates?:import("./estimates.ts").EstimateSettings;
   processes?:ProcessDefinition[];
   bomNames?: BomName[]; categories?: BomCategory[]; today?: string; bom?: BomItem[]; needsRecalculation?: boolean; products: Product[]; parts: Part[]; equipment: Equipment[]; workers: Worker[];
   tasks: Task[]; logs: WorkLog[]; calendar: Record<string, boolean>; revision: number;
