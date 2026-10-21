@@ -20,7 +20,7 @@ export default function BomFields({ row, products, items, categories = DEFAULT_B
     {bulk&&<input type="hidden" name="categoryId" value={categoryId} />}
     <label>区分<select disabled={bulk} name="categoryId" value={categoryId} required onChange={event => { setCategoryId(event.target.value); setName(""); }}><option value="">区分を選択</option>{categories.filter(category => category.active || (Boolean(row.id) && category.id === originalCategoryId)).map(category => <option key={category.id} value={category.id}>{category.name}{!category.active && "（停止中）"}</option>)}</select></label>
     <input type="hidden" name="kind" value={kind} />
-    <label>名称<select name="name" disabled={bulk} value={name} onChange={event => setName(event.target.value)} required><option value="">名称を選択</option>{legacyName && <option value={name}>{name}（現在の登録）</option>}{options.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
+    {!bulk&&<label>名称<select name="name" value={name} onChange={event => setName(event.target.value)} required><option value="">名称を選択</option>{legacyName && <option value={name}>{name}（現在の登録）</option>}{options.map(item => <option key={item} value={item}>{item}</option>)}</select></label>}
     {!bulk && !options.length && !legacyName && <p role="status">選択できる名称がありません。名称リストへ登録してください。プレートは同じ金型の登録済み名称を除外します。</p>}
     <label>金型<select name="productId" value={productId} onChange={event => { setProductId(event.target.value); setName(""); }} disabled={Boolean(row.id)} required>{products.filter(item => !item.archived || item.id === row.productId).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
     {row.id && <input type="hidden" name="productId" value={productId} />}
