@@ -8,7 +8,7 @@ const instant = z.string().refine(value => Number.isFinite(Date.parse(value)), "
 const text = z.string().trim().min(1).max(120);
 export const masterSchemas = {
  product: z.object({ id: uuid.optional(), name:text, customer:z.string().max(120), dueDate:date, notes:z.string().max(2000), archived:z.boolean() }),
- bom: z.object({ categoryId:uuid.optional(), id:uuid.optional(), productId:uuid, name:text, kind:z.enum(["plate","part"]), quantity:z.number().int().min(1).max(1000000), notes:z.string().max(2000), processes:z.array(processCode.refine(code=>!["assembly","trial"].includes(code))).min(1).max(100), archived:z.boolean() }),
+ bom: z.object({ categoryId:uuid.optional(), id:uuid.optional(), productId:uuid, name:text, kind:z.enum(["plate","part"]), quantity:z.number().int().min(1).max(1000000), notes:z.string().max(2000), processes:z.array(processCode.refine(code=>!["assembly","trial"].includes(code))).max(100), archived:z.boolean() }),
  category: z.object({ id:uuid.optional(), name:text, kind:z.enum(["plate","part"]), active:z.boolean() }),
  bomName: z.object({ id:uuid.optional(), categoryId:uuid, name:text, active:z.boolean() }),
  equipment:z.object({ id:uuid.optional(), name:text, process:processCode, active:z.boolean() }),

@@ -76,5 +76,12 @@ test("name-only process registration, dynamic BOM, scheduling, CRUD, authorizati
   await assert.rejects(()=>save("bom",{...bom,id:randomUUID(),processes:[stoppable.process]}),/有効な登録済み/);
   await save("process",{id:stoppable.id,name:"停止工程",active:true});
   assert.equal((await read()).processes!.find(p=>p.code===stoppable.process)!.active,true);
+  await db.exec("reset role");
+  await db.exec(await readFile(new URL("../../supabase/migrations/202610210001_bom_no_internal_process.sql",import.meta.url),"utf8"));
+  await db.exec(`set role authenticated;set request.jwt.claim.sub='${admin}'`);
+  await save("bom",{...bom,processes:[]});
+  assert.deepEqual((await read()).bom!.find(item=>item.id===bom.id)!.processes,[]);
+  await save("bom",{...bom,processes:["wire"]});
+  assert.deepEqual((await read()).bom!.find(item=>item.id===bom.id)!.processes,["wire"]);
  }finally{await db.close();}
 });

@@ -11,7 +11,7 @@ test("selected processes skip unused stages while keeping the standard order",()
 test("quantity accounts for split batches and releases cancelled quantities",()=>{
  const data=createDemo();data.bom=[{id:"b",productId:"p1",name:"部品",kind:"part",quantity:4,notes:"",processes:["wire"],archived:false}];data.parts=[{id:"1",productId:"p1",bomId:"b",name:"部品",quantity:2,drawingNumber:""},{id:"2",productId:"p1",bomId:"b",name:"部品",quantity:1,drawingNumber:"",archived:true}];assert.equal(remainingQuantity(data,"b"),2);
 });
-test("BOM input requires at least one process",()=>{assert.equal(masterSchemas.bom.safeParse({productId:"11111111-1111-4111-8111-111111111111",name:"部品",kind:"part",quantity:1,notes:"",processes:[],archived:false}).success,false);});
+test("BOM input accepts no internal processes for purchased or outsourced parts",()=>{assert.equal(masterSchemas.bom.safeParse({productId:"11111111-1111-4111-8111-111111111111",name:"部品",kind:"part",quantity:1,notes:"",processes:[],archived:false}).success,true);});
 async function workbook(rows:unknown[][]){const w=new ExcelJS.Workbook();const s=w.addWorksheet("会社カレンダー");for(const row of rows)s.addRow(row);return new Uint8Array(await w.xlsx.writeBuffer());}
 test("Excel accepts normalized dates and explicit working day values",async()=>{const days=await parseCalendarExcel(await workbook([["日付","稼働日"],["2026/10/1",1],["2026-10-02","休日"]]));assert.deepEqual(days,[{date:"2026-10-01",working:true},{date:"2026-10-02",working:false}]);});
 test("Excel rejects duplicate dates, invalid values and missing headers",async()=>{
