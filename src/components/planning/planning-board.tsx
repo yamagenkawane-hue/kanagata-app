@@ -36,7 +36,7 @@ export default function PlanningBoard({ initialData, initialRole="admin", proces
   const [role, setRole] = useState<"admin" | "operator">(initialRole);
   const [autoPlateOpen,setAutoPlateOpen]=useState(false);
   const [dashboardDetail,setDashboardDetail]=useState<string|null>(null);
-  const [groupMode,setGroupMode]=useState<"machine"|"mold">("machine");
+  const [groupMode,setGroupMode]=useState<"machine"|"mold">("mold");
   const [startDate, setStartDate] = useState(initialDate); const [viewDays, setViewDays] = useState(7);
   const [activeProcessFilter,setActiveProcessFilter]=useState(processFilter);
   const [filter, setFilter] = useState(""); const [equipmentFilter, setEquipmentFilter] = useState(machineFilter); const [query, setQuery] = useState("");
