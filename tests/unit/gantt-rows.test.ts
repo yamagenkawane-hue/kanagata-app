@@ -12,10 +12,10 @@ test("DB1 8:50-9:50 and DP 9:50-10:50 share one machine row without changing tas
  const rows=ganttRows(input);assert.equal(rows.length,1);assert.deepEqual(rows[0].tasks.map(task=>task.id),["DB1","DP"]);assert.deepEqual(input,before);
 });
 
-test("different machines remain separate and overlapping bars stay selectable",()=>{
+test("different machines remain separate without auxiliary rows for overlaps",()=>{
  const rows=ganttRows([task("DB1",530,590),task("overlap",560,620),task("DP",620,680),task("MC2part",530,590,"MC2")]);
- assert.equal(rows.length,3);assert.deepEqual(rows.flatMap(row=>row.tasks.map(task=>task.id)).sort(),["DB1","DP","MC2part","overlap"]);
- for(const row of rows)for(let i=1;i<row.tasks.length;i++)assert.ok(Date.parse(row.tasks[i-1].plannedEnd)<=Date.parse(row.tasks[i].plannedStart));
+ assert.equal(rows.length,2);assert.deepEqual(rows.flatMap(row=>row.tasks.map(task=>task.id)).sort(),["DB1","DP","MC2part","overlap"]);
+ assert.ok(rows.every(row=>row.track===0));
 });
 
 test("processes retain machining, grinding, wire, assembly and trial order",()=>{

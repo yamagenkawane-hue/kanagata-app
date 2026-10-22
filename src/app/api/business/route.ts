@@ -5,6 +5,8 @@ import { actualSchema, masterSchemas, planSchema } from "@/domain/business";
 import { businessContext, BusinessError, readPlanning } from "@/lib/business/server";
 import { validatePlate } from "@/domain/plates";
 import { processCatalog } from "@/domain/planning";
+import { activePlan } from "@/domain/business";
+import { resolveMachineOverlap } from "@/domain/resolve-machine-overlap";
 const headers={"Cache-Control":"private, no-store"};
 function errorResponse(cause:unknown){
  if(cause instanceof z.ZodError) return NextResponse.json({error:cause.issues.map(x=>x.message).join(" / ")},{status:400,headers});
@@ -17,7 +19,7 @@ export async function POST(request:Request){
   if(!sameOrigin(request)) throw new BusinessError("許可されていない要求です",403);
   let raw:string;try{raw=new TextDecoder().decode(await boundedBody(request,5_000_000));}catch{throw new BusinessError("送信データが大きすぎます",413);}
   let parsed:unknown;try{parsed=JSON.parse(raw);}catch{throw new BusinessError("JSONの形式が不正です");}
-  const input=z.object({operation:z.enum(["master","plan","actual","deleteActual","seed"]),expected:z.number().int().positive(),entity:z.string().optional(),payload:z.unknown(),acceptOverlap:z.boolean().optional()}).parse(parsed);
+  const input=z.object({operation:z.enum(["master","plan","actual","deleteActual","seed","resolveOverlap"]),expected:z.number().int().positive(),entity:z.string().optional(),payload:z.unknown(),acceptOverlap:z.boolean().optional()}).parse(parsed);
   const context=await businessContext();
   if(input.operation!=="actual"&&context.role!=="admin")throw new BusinessError("管理者のみ操作できます",403);
   let rpc:string; let args:Record<string,unknown>;
@@ -57,12 +59,20 @@ export async function POST(request:Request){
     if(schema.error)throw new BusinessError("型組・トライのDB設定を確認できませんでした。接続を確認してください。",503);
    }
    rpc="commit_plan";args={payload,expected:input.expected,accept_overlap:input.acceptOverlap??false};
+  }else if(input.operation==="resolveOverlap"){
+   const choice=z.object({winnerId:z.string().uuid(),loserId:z.string().uuid()}).parse(input.payload);
+   const current=activePlan(await readPlanning(context.client));
+   if(current.revision!==input.expected)throw new BusinessError("予定・実績が更新されました。画面を再読み込みしてください。",409);
+   let resolved:ReturnType<typeof resolveMachineOverlap>;
+   try{resolved=resolveMachineOverlap(current,choice.winnerId,choice.loserId);}catch(cause){throw new BusinessError(cause instanceof Error?cause.message:"重複を解消できませんでした。");}
+   rpc="resolve_machine_overlap";args={expected:input.expected,payload:{...choice,delta:resolved.delta,...planSchema.parse({parts:resolved.data.parts,tasks:resolved.data.tasks})}};
   }else if(input.operation==="actual"){
    rpc="save_actual";args={payload:actualSchema.parse(input.payload),expected:input.expected,remove_log:false};
   }else if(input.operation==="deleteActual"){
    rpc="save_actual";args={payload:z.object({id:z.string().uuid()}).parse(input.payload),expected:input.expected,remove_log:true};
   }else {rpc="seed_test_data";args={expected:input.expected};}
   const result=await context.client.rpc(rpc,args);
+  if(result.error&&input.operation==="resolveOverlap"&&result.error.code==="PGRST202")throw new BusinessError("重複解消のDB設定が必要です。202610220001_resolve_machine_overlap.sql を実行してください。",503);
   if(result.error&&input.entity==="standardPlates"&&result.error.message.includes("操作対象が不正"))throw new BusinessError("標準プレート登録のDB設定が必要です。202610210004_standard_plate_bom.sql を実行してください。",503);
   if(result.error)throw new BusinessError(result.error.message,["PT409","40001"].includes(result.error.code)?409:result.error.code==="42501"?403:400);
   return NextResponse.json({data:await readPlanning(context.client)},{headers});

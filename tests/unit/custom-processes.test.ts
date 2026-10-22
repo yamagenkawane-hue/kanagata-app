@@ -5,8 +5,9 @@ import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import { at, bomProcessCatalog, processCatalog, schedule, type PlanData, type Task } from "../../src/domain/planning.ts";
 import {autoPlatePlans} from "../../src/domain/estimates.ts";
-import { masterSchemas, orderedProcesses, planSchema } from "../../src/domain/business.ts";
+import { activePlan, masterSchemas, orderedProcesses, planSchema } from "../../src/domain/business.ts";
 import { ganttRows } from "../../src/domain/gantt-rows.ts";
+import {resolveMachineOverlap} from "../../src/domain/resolve-machine-overlap.ts";
 
 test("name-only process registration, dynamic BOM, scheduling, CRUD, authorization and rollback",async()=>{
  const db=new PGlite();const admin=randomUUID(),operator=randomUUID();
@@ -165,5 +166,29 @@ test("name-only process registration, dynamic BOM, scheduling, CRUD, authorizati
   await assert.rejects(()=>save("standardPlates",{...standardPayload,productId:rollbackProduct}),/名称リスト/);
   assert.equal((await read()).bom!.filter(item=>item.productId===rollbackProduct).length,0);
   assert.equal((await read()).revision,rollbackRevision);
+  await db.exec("reset role");
+  await db.exec(await readFile(new URL("../../supabase/migrations/202610220001_resolve_machine_overlap.sql",import.meta.url),"utf8"));
+  await db.query("update public.parts set is_archived=true where id=$1",[snapshotId]);
+  await db.exec(`set role authenticated;set request.jwt.claim.sub='${admin}'`);
+  const overlapSource=await read();const grinding=overlapSource.tasks.filter(task=>task.process==="grinding");
+  const keep=grinding[0],move=grinding.find(task=>task.id!==keep.id&&task.equipmentId===keep.equipmentId)!;
+  assert.ok(move);
+  for(const [task,start,end] of [[keep,900,1020],[move,960,1080]] as const){
+   await db.query("select public.save_actual($1,$2,false)",[JSON.stringify({taskId:task.id,workerId:admin,start:at("2026-10-22",start),end:at("2026-10-22",end),status:"completed",overrideMinutes:null,reason:"重複テスト",acceptOverlap:true}),(await read()).revision]);
+  }
+  const overlapBefore=await read();const resolution=resolveMachineOverlap(activePlan(overlapBefore),keep.id,move.id);
+  const resolvePayload={winnerId:keep.id,loserId:move.id,delta:resolution.delta,...planSchema.parse({parts:resolution.data.parts,tasks:resolution.data.tasks})};
+  await db.exec(`set request.jwt.claim.sub='${operator}'`);
+  await assert.rejects(()=>db.query("select public.resolve_machine_overlap($1,$2)",[JSON.stringify(resolvePayload),overlapBefore.revision]),/管理者/);
+  await db.exec(`set request.jwt.claim.sub='${admin}'`);
+  const badPayload=structuredClone(resolvePayload);badPayload.tasks.find(task=>task.id===keep.id)!.duration+=30;
+  await assert.rejects(()=>db.query("select public.resolve_machine_overlap($1,$2)",[JSON.stringify(badPayload),overlapBefore.revision]),/維持/);
+  assert.deepEqual((await read()).logs,overlapBefore.logs);assert.equal((await read()).revision,overlapBefore.revision);
+  await db.query("select public.resolve_machine_overlap($1,$2)",[JSON.stringify(resolvePayload),overlapBefore.revision]);
+  const overlapSaved=await read();const movedLog=overlapSaved.logs.find(log=>log.taskId===move.id)!;
+  assert.equal(Date.parse(movedLog.start),Date.parse(at("2026-10-22",1020)));
+  assert.equal(Date.parse(movedLog.end),Date.parse(at("2026-10-22",1140)));
+  assert.equal(Date.parse(overlapSaved.tasks.find(task=>task.id===move.id)!.actualStart!),Date.parse(movedLog.start));
+  const audit=(await db.query<{count:number}>("select count(*)::integer count from public.change_logs where entity_type='overlap_resolution' and entity_id=$1 and before_data is not null and after_data is not null",[move.id])).rows[0];assert.equal(audit.count,1);
  }finally{await db.close();}
 });
