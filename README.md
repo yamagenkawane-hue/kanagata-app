@@ -5,7 +5,7 @@ Next.js 16 / React 19 / TypeScript strict / Supabase。PCで約10名の利用を
 
 ## 起動
 
-Node.js 24.22.1を使用する。package.jsonのengines、.nvmrc、.node-versionを同じバージョンに固定している。
+Node.js 26系を使用する。package.jsonのenginesは26系を指定し、.nvmrc・.node-versionは26.13.0を指定している。
 
 ```powershell
 npm ci
