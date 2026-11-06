@@ -1,6 +1,6 @@
 # 金型生産管理システム（kanagata-app）
 
-Next.js 16 / React 19 / TypeScript strict / Supabase。PCで約10名の利用を想定する。
+Next.js 16.4.5 / React 19 / TypeScript strict / Supabase。PCで約10名の利用を想定する。
 最新仕様・設定手順・確認状態は[最新仕様と実装状況](docs/最新仕様と実装状況_2026-10-05_名称リスト.md)、変更履歴は[docs一覧](docs/README.md)を参照する。
 
 ## 起動
