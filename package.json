@@ -9,7 +9,10 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "node --test tests/unit/*.test.ts"
+    "test": "node --test tests/unit/*.test.ts",
+    "build:pilot": "next build --webpack",
+    "pilot": "npm run build:pilot && next start --hostname 127.0.0.1",
+    "test:smoke": "node scripts/smoke-test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

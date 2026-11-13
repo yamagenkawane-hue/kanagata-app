@@ -5,6 +5,8 @@ Next.js 16.4.5 / React 19 / TypeScript strict / Supabase。PCで約10名の利�
 
 ## 起動
 
+現在のPCでの試験運用は `npm run pilot` で起動する（127.0.0.1:3000、本番ビルド後に開始）。準備状況は `/workspace/readiness` で確認できる。起動・試験手順と既知の制約は[テスト運用ガイド](docs/テスト運用ガイド_2026-11-13.md)を参照する。
+
 Node.js 26系を使用する。package.jsonのenginesは26系を指定し、.nvmrc・.node-versionは26.13.0を指定している。
 
 ```powershell
