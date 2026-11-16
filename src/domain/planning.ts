@@ -146,8 +146,8 @@ export function schedule(data: PlanData, startStepMinutes:1|30=1): Task[] {
     const required = part.processes ?? PROCESSES.map((process) => process.code);
     if(required.some(code=>!processes.some(process=>process.code===code)))throw new Error(`${part.name} に未登録の工程があります。`);
     const chain = processes.filter((process) => required.includes(process.code)).map((process) => tasks.find((task) => task.partId === part.id && task.process === process.code));
-    if (chain.some((item) => !item)) throw new Error(`${part.name} の必要工程をすべて登録してください。`);
-    for (let index = 1; index < chain.length; index++) dependencies.get(chain[index]!.id)!.add(chain[index - 1]!.id);
+    const registered = chain.filter((item): item is Task => Boolean(item));
+    for (let index = 1; index < registered.length; index++) dependencies.get(registered[index].id)!.add(registered[index - 1].id);
   }
   for (const task of tasks) {
     const owner = data.parts.find(part => part.id === task.partId);

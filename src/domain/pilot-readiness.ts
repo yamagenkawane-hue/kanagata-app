@@ -19,7 +19,7 @@ export function pilotReadiness(source:PlanData,today:string):ReadinessCheck[]{
   {id:"calendar-horizon",label:"3か月先のカレンダー",status:Object.hasOwn(data.calendar,addDays(today,90))?"ok":"warning",message:`最終設定日：${Object.keys(data.calendar).sort().at(-1)??"未設定"}。長期予定の作成前に対象期間を確認してください。`},
   {id:"machines",label:"加工機械",status:missingMachines.length?"blocked":"ok",message:missingMachines.length?`有効な機械がない工程：${missingMachines.map(code=>processCatalog(data).find(process=>process.code===code)?.name).join("・")}`:`主要3工程の機械は登録済み。ワイヤー ${data.equipment.filter(machine=>machine.process==="wire"&&machine.active!==false).length}台。`},
   {id:"overlaps",label:"設備の時間重複",status:overlaps?"blocked":"ok",message:overlaps?`${overlaps}件。ガントの優先確認で解消してください。`:"重複はありません。"},
-  {id:"processes",label:"登録済みロットの必要工程",status:incomplete.length?"blocked":"ok",message:incomplete.length?`${incomplete.length}ロットで工程が不足しています。`:"必要工程に欠落はありません。"},
+  {id:"processes",label:"登録済みロットの必要工程",status:incomplete.length?"warning":"ok",message:incomplete.length?`${incomplete.length}ロットに未登録工程があります。BOMから工程別に追加できます。`:"必要工程に欠落はありません。"},
   {id:"quantity",label:"BOM数量",status:invalidQuantity?"blocked":"ok",message:invalidQuantity?`${invalidQuantity}項目で必要数量を超えています。`:"必要数量の超過はありません。"},
   {id:"sizes",label:"プレート寸法",status:missingSizes?"warning":"ok",message:missingSizes?`${missingSizes}項目が未設定。概算予定の自動登録前に入力してください。`:"登録済みプレートの寸法は入力済みです。"},
   {id:"accounts",label:"利用者の役割",status:admins?operators?"ok":"warning":"blocked",message:`有効な管理者 ${admins}名／担当者 ${operators}名。担当者の権限も確認してから運用してください。`},

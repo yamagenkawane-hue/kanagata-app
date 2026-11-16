@@ -17,6 +17,6 @@ test("readiness catches absent machines, missing stages and exceeding BOM quanti
  const data=createDemo();data.equipment=data.equipment.map(machine=>({...machine,active:false}));
  data.tasks=data.tasks.filter(task=>task.id!==data.tasks[0].id);
  const bom=data.bom![0];data.parts.push({...data.parts.find(part=>part.bomId===bom.id)!,id:"too-many",bomId:bom.id,quantity:bom.quantity+1});
- const checks=pilotReadiness(data,"2026-11-13");
- for(const id of ["machines","processes","quantity"])assert.equal(checks.find(check=>check.id===id)!.status,"blocked",id);
+ const checks=pilotReadiness(data,"2026-11-13"); assert.equal(checks.find(check=>check.id==="processes")!.status,"warning");
+ for(const id of ["machines","quantity"])assert.equal(checks.find(check=>check.id===id)!.status,"blocked",id);
 });
