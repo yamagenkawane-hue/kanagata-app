@@ -17,7 +17,7 @@ export function resolveTimeMove(data:PlanData,sourceId:string,start:string,mode:
  const source=data.tasks.find(task=>task.id===sourceId);
  if(!source||!canMoveTask(source))throw new Error("移動できるのは固定されていない未着手の予定です。");
  const placed=placeAtRequestedStart({...source,earliestStart:start},data.calendar);
- if(mode==="move"){
+ if(mode==="move" || (mode==="shift" && Date.parse(placed.plannedStart)<Date.parse(source.plannedStart))){
   // Preserve existing start times; only dependencies/conflicts may delay other jobs.
   const anchored={...data,tasks:data.tasks.map(task=>task.id!==sourceId&&canMoveTask(task)&&task.plannedStart?{...task,earliestStart:new Date(Math.max(Date.parse(task.earliestStart),Date.parse(task.plannedStart))).toISOString()}:task)};
   return moveTaskInTime(anchored,sourceId,start);

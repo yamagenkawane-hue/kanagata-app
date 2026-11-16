@@ -76,3 +76,17 @@ test("free-time drag preserves SB and DB starts instead of shifting all followin
  }
  assert.deepEqual(data,original);
 });
+
+test("moving DB onto PB earlier inserts DB before PB instead of restoring its old rank",()=>{
+ const jobs=[task("PB",1),task("SB",2),task("DB",3)];
+ jobs.forEach((job,index)=>{job.plannedStart=at("2026-10-07",540+index*60);job.plannedEnd=at("2026-10-07",600+index*60);job.earliestStart=job.plannedStart;job.segments=[{start:job.plannedStart,end:job.plannedEnd}];});
+ const data={...createDemo(),tasks:jobs,parts:jobs.map(job=>({id:job.partId,productId:"p",name:job.id,quantity:1,drawingNumber:"",processes:["machining"]})),equipment:[{id:"m",name:"m",process:"machining"}],workers:[{id:"w",name:"w"}],calendar:{"2026-10-07":true,"2026-10-08":true}};
+ const original=structuredClone(data);
+ assert.deepEqual(moveConflicts(data,"DB",jobs[0].plannedStart).map(job=>job.id),["PB"]);
+ const result=schedule(resolveTimeMove(data,"DB",jobs[0].plannedStart,"shift"),30);
+ assert.deepEqual(order(result),["DB","PB","SB"]);
+ assert.equal(result.find(job=>job.id==="DB")!.plannedStart,jobs[0].plannedStart);
+ assert.equal(result.find(job=>job.id==="PB")!.plannedStart,at("2026-10-07",600));
+ assert.equal(result.find(job=>job.id==="SB")!.plannedStart,at("2026-10-07",660));
+ assert.deepEqual(data,original);
+});
