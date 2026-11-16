@@ -13,10 +13,15 @@ export function moveConflicts(data:PlanData,sourceId:string,start:string):Task[]
  return data.tasks.filter(task=>task.id!==sourceId&&task.equipmentId===source.equipmentId&&placed.segments.some(segment=>(task.status==="completed"&&task.actualStart&&task.actualEnd?[{start:task.actualStart,end:task.actualEnd}]:task.segments.length?task.segments:[{start:task.plannedStart,end:task.plannedEnd}]).some(other=>overlaps(segment,other)))).sort((a,b)=>Date.parse(a.plannedStart)-Date.parse(b.plannedStart));
 }
 
-export function resolveTimeMove(data:PlanData,sourceId:string,start:string,mode:"shift"|"swap",targetId?:string):PlanData {
+export function resolveTimeMove(data:PlanData,sourceId:string,start:string,mode:"move"|"shift"|"swap",targetId?:string):PlanData {
  const source=data.tasks.find(task=>task.id===sourceId);
  if(!source||!canMoveTask(source))throw new Error("移動できるのは固定されていない未着手の予定です。");
  const placed=placeAtRequestedStart({...source,earliestStart:start},data.calendar);
+ if(mode==="move"){
+  // Preserve existing start times; only dependencies/conflicts may delay other jobs.
+  const anchored={...data,tasks:data.tasks.map(task=>task.id!==sourceId&&canMoveTask(task)&&task.plannedStart?{...task,earliestStart:new Date(Math.max(Date.parse(task.earliestStart),Date.parse(task.plannedStart))).toISOString()}:task)};
+  return moveTaskInTime(anchored,sourceId,start);
+ }
  let tasks:Task[];
  if(mode==="swap"){
   const target=data.tasks.find(task=>task.id===targetId);

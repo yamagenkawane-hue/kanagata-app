@@ -78,10 +78,10 @@ export default function PlanningBoard({ initialData, initialRole="admin", proces
   }
   function moveTime(sourceId:string,start:string){
     if(role!=="admin"||busy||saveUncertain||draft)return;
-    try{const conflicts=moveConflicts(data,sourceId,start);if(conflicts.length){setPendingMove({sourceId,start,conflicts});setError("");return;}applyMove(sourceId,start,"shift");}catch(cause){fail(cause);}
+    try{const conflicts=moveConflicts(data,sourceId,start);if(conflicts.length){setPendingMove({sourceId,start,conflicts});setError("");return;}applyMove(sourceId,start,"move");}catch(cause){fail(cause);}
   }
-  function applyMove(sourceId:string,start:string,mode:"shift"|"swap",targetId?:string){
-    try{const candidate=resolveTimeMove(data,sourceId,start,mode,targetId);const scheduled={...candidate,tasks:schedule(candidate,30)};setStagedBaseline(stagedBaseline??data);setData(scheduled);setPendingMove(null);setError("");setNotice(mode==="shift"?"加工順を維持し、移動した分だけ後続の開始希望をずらしました。休日・休憩・固定予定を考慮した結果を表示しています（未保存）。":"加工順を入れ替え、後工程を再計算しました（未保存）。");}catch(cause){fail(cause);}
+  function applyMove(sourceId:string,start:string,mode:"move"|"shift"|"swap",targetId?:string){
+    try{const candidate=resolveTimeMove(data,sourceId,start,mode,targetId);const scheduled={...candidate,tasks:schedule(candidate,30)};setStagedBaseline(stagedBaseline??data);setData(scheduled);setPendingMove(null);setError("");setNotice(mode==="move"?"選択した予定を移動しました。影響のない予定の時刻は維持しています（未保存）。":mode==="shift"?"加工順を維持し、移動した分だけ後続の開始希望をずらしました。休日・休憩・固定予定を考慮した結果を表示しています（未保存）。":"加工順を入れ替え、後工程を再計算しました（未保存）。");}catch(cause){fail(cause);}
   }
   async function commit() {
     if (!draft || role !== "admin" || busy || saveUncertain) return;

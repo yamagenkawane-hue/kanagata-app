@@ -63,3 +63,16 @@ test("overlapping drag offers distinct shift and swap results, preserving a dela
  assert.throws(()=>resolveTimeMove(fixed,"a",at("2026-10-07",590),"swap","b"));
  assert.deepEqual(resolveTimeMove(fixed,"a",at("2026-10-07",590),"shift").tasks.find(task=>task.id==="b"),fixed.tasks[1]);
 });
+
+test("free-time drag preserves SB and DB starts instead of shifting all following plates",()=>{
+ const jobs=[task("PB",1),task("SB",2),task("DB",3)];
+ jobs.forEach((job,index)=>{job.plannedStart=at("2026-10-07",540+index*120);job.plannedEnd=at("2026-10-07",600+index*120);job.segments=[{start:job.plannedStart,end:job.plannedEnd}];});
+ const data={...createDemo(),tasks:jobs,parts:jobs.map(job=>({id:job.partId,productId:"p",name:job.id,quantity:1,drawingNumber:"",processes:["machining"]})),equipment:[{id:"m",name:"m",process:"machining"}],workers:[{id:"w",name:"w"}],calendar:{"2026-10-07":true,"2026-10-08":true}};
+ const original=structuredClone(data);
+ for(const start of [at("2026-10-07",570),at("2026-10-08",540)]){
+  const result=schedule(resolveTimeMove(data,"PB",start,"move"),30);
+  assert.equal(result.find(job=>job.id==="PB")!.plannedStart,start);
+  for(const id of ["SB","DB"])assert.equal(result.find(job=>job.id===id)!.plannedStart,jobs.find(job=>job.id===id)!.plannedStart);
+ }
+ assert.deepEqual(data,original);
+});
