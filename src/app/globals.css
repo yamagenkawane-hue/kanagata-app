@@ -73,7 +73,23 @@ button.summary-card{width:100%;text-align:left;color:inherit}button.summary-card
   background: white;
   pointer-events: none;
 }
-.planning-dashboard .chart-footer { padding: 6px 12px; }
+.planning-dashboard .chart-footer {
+  height: auto;
+  min-height: 45px;
+  padding: 8px 12px;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+.planning-dashboard .legend {
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.planning-dashboard .legend span { white-space: nowrap; }
+.planning-dashboard .legend i { width: 14px; height: 14px; }
 .planning-dashboard .bottom-note summary { cursor: pointer; color: #414e5b; }
 
 .planning-dashboard .heading-columns,
