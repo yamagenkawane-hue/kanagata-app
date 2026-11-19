@@ -116,3 +116,10 @@ button.summary-card{width:100%;text-align:left;color:inherit}button.summary-card
   height: 32px;
   padding: 0;
 }
+
+.planning-dashboard .heading-columns { font-size: 12px; }
+.planning-dashboard .task-columns,
+.planning-dashboard .gantt-task-name strong,
+.planning-dashboard .part-heading strong { font-size: 13px; }
+.planning-dashboard .task-bar { font-size: 12px; }
+.planning-dashboard .gantt-task-name small { font-size: 11px; }
