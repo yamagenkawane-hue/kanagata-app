@@ -4,7 +4,7 @@ import MoldDetail from "@/components/business/mold-detail";
 import Management from "@/components/business/management";
 import { createDemo } from "@/domain/demo";
 import { PROCESSES } from "@/domain/planning";
-export default async function Page({params}:{params:Promise<{section?:string[]}>}){
+export default async function Page({params,searchParams}:{params:Promise<{section?:string[]}>;searchParams:Promise<{product?:string}>}){
  const {section=[]}=await params;const data=createDemo();const kind=section[0];
  if(!kind)return <PlanningBoard />;
  if(kind==="products"&&section.length===2){if(!data.products.some(product=>product.id===section[1]))notFound();redirect(`/demo/mold-details/${section[1]}`);}
@@ -15,5 +15,6 @@ export default async function Page({params}:{params:Promise<{section?:string[]}>
  }
  if(!["products","bom","bom-names","equipment","users","calendar","actuals"].includes(kind)||section.length>2||(section.length===2&&kind!=="products"))notFound();
  if(section[1]&&!data.products.some(x=>x.id===section[1]))notFound();
- return <Management initialData={data} role="admin" section={kind} productId={section[1]} basePath="/demo" demo />;
+ const productId=kind==="bom"?(await searchParams).product:undefined;
+ return <Management key={`${kind}-${productId??""}`} initialData={data} role="admin" section={kind} productId={productId} basePath="/demo" demo />;
 }

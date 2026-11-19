@@ -140,3 +140,71 @@ button.summary-card{width:100%;text-align:left;color:inherit}button.summary-card
 .planning-dashboard .task-bar { font-size: 12px; }
 .planning-dashboard .gantt-task-name small { font-size: 11px; }
 .planning-dashboard .capacity-warning, .planning-dashboard .gantt-task-name small.capacity-warning { color: #ad182c; font-weight: 700; }
+
+.management-page, .login-screen { --green: #225ea8; --muted: #526274; }
+.management-page { font-size: 15px; }
+.management-header {
+  flex-wrap: wrap; justify-content: flex-end; padding: 12px 18px;
+  border-radius: 8px; background: #20354a; color: white;
+}
+.management-header > a { color: white; }
+.management-header > a:first-child { margin-right: auto; font-weight: 700; }
+.management-nav { gap: 4px; }
+.management-nav a { font-weight: 600; }
+.management-nav a[aria-current="page"] { background: #225ea8; color: white; }
+.management-page :is(a, summary):focus-visible { outline: 3px solid #5589c3; outline-offset: 2px; }
+.management-page .button, .login-card .button {
+  background: var(--green); color: white; border-color: var(--green); font-size: 14px;
+}
+.management-page .button:hover, .login-card .button:hover { background: #194e8d; color: white; }
+.management-page .button.small { padding: 6px 11px; font-size: 13px; }
+.management-page .page-heading { gap: 16px; flex-wrap: wrap; }
+.scope-name { margin-left: 12px; color: #455a70; font-size: 16px; }
+.management-page .help-text, .login-card .help-text { font-size: 13px; color: #526274; }
+.management-page label, .login-card label { font-size: 14px; }
+.list-controls {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px;
+  justify-content: space-between; padding-block: 10px; border-bottom: 1px solid #cbd7e3;
+}
+.list-controls label { margin: 0; }
+.month-filter { flex-direction: row; align-items: center; }
+.management-page .entity-grid { margin-block: 16px; }
+.entity-grid .entity-card { margin: 0; border-top: 3px solid #57789b; }
+.card-facts { display: grid; gap: 5px; margin-block: 12px; }
+.card-facts div { display: grid; grid-template-columns: 4em 1fr; gap: 8px; }
+.card-facts dt, .milestones dt, .item-details dt { color: #526274; font-size: 13px; }
+.management-table thead th { color: #263c52; background: #e2ebf4; }
+.management-table tbody tr:hover { background: #f4f8fc; }
+.management-table .row-actions { margin-block: 0; }
+.actual-breakdown, .management-table small { display: block; margin-top: 4px; }
+.management-page summary { cursor: pointer; color: #214f80; }
+.list-empty { padding: 24px; background: white; text-align: center; color: #526274; }
+.state-tag {
+  display: inline-block; white-space: nowrap; font-size: 13px; font-weight: 700;
+  border-radius: 5px; padding: 3px 9px; color: #495969; background: #edf1f5;
+}
+.state-tag.done { color: #175472; background: #d9effa; }
+.state-tag.running { color: white; background: #225ea8; }
+.state-tag.pending { color: #704c08; background: #fff1c2; }
+.state-tag.partial { color: #45356f; background: #ebe4fc; }
+.state-tag.enabled { color: #18543f; background: #dff2e9; }
+.state-tag.holiday { color: #85374e; background: #ffe1ec; }
+.muted-state { color: #586676; font-size: 13px; }
+.mold-overview {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  gap: 20px; padding: 22px; margin: 18px 0 26px; background: white;
+  border: 1px solid #cbd7e3; border-left: 5px solid #225ea8; border-radius: 8px;
+}
+.mold-overview p { color: #455a70; }
+.milestones { display: flex; flex-wrap: wrap; gap: 12px 28px; }
+.milestones dd { font-weight: 700; font-variant-numeric: tabular-nums; }
+.milestones dd span { display: block; }
+.progress-scroll { overflow-x: auto; }
+.progress-matrix th, .progress-matrix td { vertical-align: top; }
+.progress-matrix thead th { white-space: nowrap; }
+.progress-matrix tbody th { background: transparent; min-width: 13em; }
+.item-details dl {
+  display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin-top: 10px;
+  padding: 10px; background: #f2f6fa; font-size: 13px; font-weight: 400; overflow-wrap: anywhere;
+}
+.login-card { border-top: 4px solid #225ea8; }
