@@ -7,9 +7,9 @@ import { canMoveTask } from "@/domain/reorder-tasks";
 import { ganttRows } from "@/domain/gantt-rows";
 import { BREAKS, processCatalog, dateTimeLabel, type PlanData, type Task } from "@/domain/planning";
 
-const barColors: Record<string, string> = {
-  machining: "#ffcf00", grinding: "#28d667", wire: "#42b8ff",
-  assembly: "#ba91ff", trial: "#ff7752",
+export const barColors: Record<string, string> = {
+  machining: "#f3c63f", grinding: "#34bd7c", wire: "#43a9e9",
+  assembly: "#af91ea", trial: "#f28b50",
 };
 
 export default function MachineRows({tasks,data,days,dayWidth,timelineWidth,windowStart,windowEnd,selectedId,conflicts,basePath,onSelect,onList,canReorder,draggedId,onDrag,onMove,emptyEquipmentId,onMachineMove}:{tasks:Task[];data:PlanData;days:string[];dayWidth:number;timelineWidth:number;windowStart:number;windowEnd:number;selectedId:string|null;conflicts:Set<string>;basePath:string;onSelect:(id:string)=>void;onList:(ids:string[])=>void;canReorder:boolean;draggedId:string|null;onDrag:(id:string|null)=>void;onMove:(sourceId:string,start:string)=>void;emptyEquipmentId?:string;onMachineMove:(id:string,equipmentId:string,start:string)=>void}){

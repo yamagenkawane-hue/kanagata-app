@@ -26,18 +26,18 @@ button.summary-card{width:100%;text-align:left;color:inherit}button.summary-card
 
 /* B案：PCの生産計画画面 */
 .planning-dashboard {
-  --green: #173e64;
+  --green: #225ea8;
   --line: #d6dce1;
   --muted: #505a63;
   background: #f7f8fa;
   color: #202a34;
 }
-.planning-dashboard .sidebar { background: #10263d; color: #eef2f7; }
+.planning-dashboard .sidebar { background: #20354a; color: #eef2f7; }
 .planning-dashboard .brand-mark { display: none; }
 .planning-dashboard .brand-text { margin: 16px 0; color: white; }
 .planning-dashboard .brand-text span { color: #bccee0; }
 .planning-dashboard .nav-item { height: 50px; margin-bottom: 4px; border-radius: 5px; }
-.planning-dashboard .nav-item.active { background: #32506e; color: white; }
+.planning-dashboard .nav-item.active { background: var(--green); color: white; }
 .planning-dashboard .nav-item:hover { background: #294058; }
 .planning-dashboard .app-header { height: 36px; padding-inline: 16px; }
 .planning-dashboard .main-content { padding: 12px 16px; }
@@ -48,7 +48,7 @@ button.summary-card{width:100%;text-align:left;color:inherit}button.summary-card
 .planning-dashboard .summary-card { min-height: 54px; padding: 5px 12px; border-radius: 5px; }
 .planning-dashboard .summary-card strong { font-size: 20px; line-height: 24px; }
 .planning-dashboard .summary-card > div > span { font-size: 12px; color: #434e59; }
-.planning-dashboard .stat-icon, .planning-dashboard .stat-note { display: none; }
+.planning-dashboard .stat-note { display: none; }
 .planning-dashboard .chart-toolbar, .planning-dashboard .filter-toolbar {
   height: auto;
   min-height: 36px;
@@ -60,7 +60,7 @@ button.summary-card{width:100%;text-align:left;color:inherit}button.summary-card
 .planning-dashboard .part-group, .planning-dashboard .part-heading { background: #e2e8ef; height: 32px; }
 .planning-dashboard .part-heading strong { color: #21364c; }
 .planning-dashboard .gantt-row { height: 39px; }
-.planning-dashboard .view-switch button.selected { background: #214264; color: white; }
+.planning-dashboard .view-switch button.selected { box-shadow: inset 0 -3px white; }
 .planning-dashboard .chart-footer { padding: 6px 12px; }
 .planning-dashboard .bottom-note summary { cursor: pointer; color: #414e5b; }
 
@@ -80,3 +80,21 @@ button.summary-card{width:100%;text-align:left;color:inherit}button.summary-card
 .planning-dashboard .task-bar { color: #202a35; font-weight: 600; }
 .planning-dashboard .task-bar.completed { opacity: .92; }
 .planning-dashboard .task-bar.dragging-bar { opacity: .45; }
+
+.planning-dashboard .summary-card[data-status="planned"]   { --card-bg: #dbeafe; --card-accent: #2063b4; }
+.planning-dashboard .summary-card[data-status="pending"]   { --card-bg: #fff1c2; --card-accent: #a06400; }
+.planning-dashboard .summary-card[data-status="completed"] { --card-bg: #d9f4e5; --card-accent: #167348; }
+.planning-dashboard .summary-card[data-status="overdue"]   { --card-bg: #fce0e3; --card-accent: #b42843; }
+.planning-dashboard .summary-card {
+  background: var(--card-bg);
+  border-left: 5px solid var(--card-accent);
+}
+.planning-dashboard .summary-card .stat-icon { color: var(--card-accent); background: transparent; }
+.planning-dashboard button:not(.summary-card, .task-bar, .schedule-list-item) {
+  background-color: var(--green);
+  border-color: var(--green);
+  color: white;
+}
+.planning-dashboard button:not(.summary-card, .task-bar, .schedule-list-item):hover:enabled {
+  background-color: #194e8d;
+}
