@@ -1,6 +1,6 @@
 import { at, BREAKS, type PlanData } from "./planning.ts";
 
-// Test the shortest bookable job at normal (non-overnight) start times.
+const requiredMinutes = 60;
 export function fullMachines(data: PlanData, days: string[]): Set<string> {
   const full = new Set<string>();
   const shifts = [[530, BREAKS[0][0]], [BREAKS[0][1], BREAKS[1][0]], [BREAKS[1][1], 1060]];
@@ -8,7 +8,7 @@ export function fullMachines(data: PlanData, days: string[]): Set<string> {
     shifts.flatMap(([from, to]) => {
       const starts: {start: number; fits: boolean}[] = [];
       for (let minute = Math.ceil(from / 30) * 30; minute < to; minute += 30)
-        starts.push({start: Date.parse(at(day, minute)), fits: minute + 30 <= to});
+        starts.push({start: Date.parse(at(day, minute)), fits: minute + requiredMinutes <= to});
       return starts;
     })
   );
@@ -25,7 +25,7 @@ export function fullMachines(data: PlanData, days: string[]): Set<string> {
     const available = slots.some(slot => {
       if (!continuous && !slot.fits) return false;
       while (index < occupied.length && occupied[index].end <= slot.start) index++;
-      return index === occupied.length || occupied[index].start >= slot.start + 30 * 60000;
+      return index === occupied.length || occupied[index].start >= slot.start + requiredMinutes * 60000;
     });
     if (!available) full.add(machine.id);
   }

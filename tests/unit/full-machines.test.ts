@@ -14,6 +14,14 @@ test("availability follows the displayed days, completed actuals and individual 
   assert.equal(fullMachines(data,[day,next]).size,0);
   task.actualEnd=at(day,1050);
   assert.equal(fullMachines(data,[day]).size,0);
+  // A 17:30 start on a wire machine may continue beyond the shift.
+  const later={...task,id:"later",actualStart:at(day,1080),actualEnd:at(day,1200)};
+  data.tasks.push(later);
+  assert.ok(fullMachines(data,[day]).has(machine.id)); // 30 minutes free
+  later.actualStart=at(day,1109);
+  assert.ok(fullMachines(data,[day]).has(machine.id)); // 59 minutes free
+  later.actualStart=at(day,1110);
+  assert.ok(!fullMachines(data,[day]).has(machine.id)); // exactly one hour
   data.calendar[next]=false;
   assert.ok(fullMachines(data,[next]).has(machine.id));
   assert.equal(fullMachines(data,["2026-11-21"]).size,0);
