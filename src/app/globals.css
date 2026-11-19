@@ -98,3 +98,9 @@ button.summary-card{width:100%;text-align:left;color:inherit}button.summary-card
 .planning-dashboard button:not(.summary-card, .task-bar, .schedule-list-item):hover:enabled {
   background-color: #194e8d;
 }
+
+.planning-dashboard .view-switch button {
+  width: 80px;
+  height: 32px;
+  padding: 0;
+}
