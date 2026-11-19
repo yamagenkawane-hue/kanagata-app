@@ -26,28 +26,28 @@ button.summary-card{width:100%;text-align:left;color:inherit}button.summary-card
 
 /* B案：PCの生産計画画面 */
 .planning-dashboard {
-  --green: #087d80;
-  --line: #d6dfe7;
-  --muted: #526478;
-  background: #f7f9fc;
-  color: #192d43;
+  --green: #17643b;
+  --line: #d6e1d8;
+  --muted: #506357;
+  background: #f7faf7;
+  color: #203429;
 }
-.planning-dashboard .sidebar { background: #172c46; color: #e6eef6; }
+.planning-dashboard .sidebar { background: #103d2b; color: #eef7ef; }
 .planning-dashboard .brand-mark { display: none; }
 .planning-dashboard .brand-text { margin: 16px 0; color: white; }
-.planning-dashboard .brand-text span { color: #9de0de; }
+.planning-dashboard .brand-text span { color: #bce0c2; }
 .planning-dashboard .nav-item { height: 50px; margin-bottom: 4px; border-radius: 5px; }
-.planning-dashboard .nav-item.active { background: #27537e; color: white; }
-.planning-dashboard .nav-item:hover { background: #304b67; }
+.planning-dashboard .nav-item.active { background: #326e45; color: white; }
+.planning-dashboard .nav-item:hover { background: #29583b; }
 .planning-dashboard .app-header { height: 36px; padding-inline: 16px; }
 .planning-dashboard .main-content { padding: 12px 16px; }
 .planning-dashboard .page-heading { margin-bottom: 8px; }
-.planning-dashboard .page-heading h1 { font-size: 23px; color: #182e48; }
+.planning-dashboard .page-heading h1 { font-size: 23px; color: #173727; }
 .planning-dashboard .demo-banner { padding: 4px 10px; margin-bottom: 8px; }
 .planning-dashboard .summary-grid { gap: 8px; margin-bottom: 8px; }
 .planning-dashboard .summary-card { min-height: 54px; padding: 5px 12px; border-radius: 5px; }
 .planning-dashboard .summary-card strong { font-size: 20px; line-height: 24px; }
-.planning-dashboard .summary-card > div > span { font-size: 12px; color: #46596e; }
+.planning-dashboard .summary-card > div > span { font-size: 12px; color: #435949; }
 .planning-dashboard .stat-icon, .planning-dashboard .stat-note { display: none; }
 .planning-dashboard .chart-toolbar, .planning-dashboard .filter-toolbar {
   height: auto;
@@ -57,26 +57,26 @@ button.summary-card{width:100%;text-align:left;color:inherit}button.summary-card
   flex-wrap: wrap;
 }
 .planning-dashboard .gantt-scroll { height: calc(100dvh - 320px); min-height: 290px; }
-.planning-dashboard .part-group, .planning-dashboard .part-heading { background: #e5edf6; height: 32px; }
-.planning-dashboard .part-heading strong { color: #183756; }
+.planning-dashboard .part-group, .planning-dashboard .part-heading { background: #e4efe2; height: 32px; }
+.planning-dashboard .part-heading strong { color: #214c30; }
 .planning-dashboard .gantt-row { height: 39px; }
-.planning-dashboard .view-switch .active { background: #203d5c; color: white; }
+.planning-dashboard .view-switch .active { background: #21643c; color: white; }
 .planning-dashboard .chart-footer { padding: 6px 12px; }
-.planning-dashboard .bottom-note summary { cursor: pointer; color: #41566b; }
+.planning-dashboard .bottom-note summary { cursor: pointer; color: #415b49; }
 
 .planning-dashboard .heading-columns,
 .planning-dashboard .hour-heading span,
 .planning-dashboard .part-meta,
 .planning-dashboard .part-heading > span:last-child,
-.planning-dashboard .chart-footer { color: #47596b; }
-.planning-dashboard .task-columns { color: #34475b; }
-.planning-dashboard .task-columns a { color: #155466; }
+.planning-dashboard .chart-footer { color: #455a4b; }
+.planning-dashboard .task-columns { color: #344a3c; }
+.planning-dashboard .task-columns a { color: #205b35; }
 .planning-dashboard .day-background {
-  border-right-color: #a6b6c5;
-  background-image: linear-gradient(to right, #d6dfe6 1px, transparent 1px);
+  border-right-color: #a8b9aa;
+  background-image: linear-gradient(to right, #d6e0d5 1px, transparent 1px);
 }
 .planning-dashboard .day-heading.off-day { background-color: #f1dfd0; }
 .planning-dashboard .day-background.off-day { background-color: #f8eadf; }
-.planning-dashboard .task-bar { color: #192d40; font-weight: 600; }
+.planning-dashboard .task-bar { color: #203528; font-weight: 600; }
 .planning-dashboard .task-bar.completed { opacity: .92; }
 .planning-dashboard .task-bar.dragging-bar { opacity: .45; }
