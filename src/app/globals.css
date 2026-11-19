@@ -75,8 +75,8 @@ button.summary-card{width:100%;text-align:left;color:inherit}button.summary-card
   border-right-color: #a8b9aa;
   background-image: linear-gradient(to right, #d6e0d5 1px, transparent 1px);
 }
-.planning-dashboard .day-heading.off-day { background-color: #f1dfd0; }
-.planning-dashboard .day-background.off-day { background-color: #f8eadf; }
+.planning-dashboard .day-heading.off-day { background-color: #ffc2d7; }
+.planning-dashboard .day-background.off-day { background-color: #ffe1ec; }
 .planning-dashboard .task-bar { color: #203528; font-weight: 600; }
 .planning-dashboard .task-bar.completed { opacity: .92; }
 .planning-dashboard .task-bar.dragging-bar { opacity: .45; }
