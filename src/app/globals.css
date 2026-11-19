@@ -63,3 +63,20 @@ button.summary-card{width:100%;text-align:left;color:inherit}button.summary-card
 .planning-dashboard .view-switch .active { background: #203d5c; color: white; }
 .planning-dashboard .chart-footer { padding: 6px 12px; }
 .planning-dashboard .bottom-note summary { cursor: pointer; color: #41566b; }
+
+.planning-dashboard .heading-columns,
+.planning-dashboard .hour-heading span,
+.planning-dashboard .part-meta,
+.planning-dashboard .part-heading > span:last-child,
+.planning-dashboard .chart-footer { color: #47596b; }
+.planning-dashboard .task-columns { color: #34475b; }
+.planning-dashboard .task-columns a { color: #155466; }
+.planning-dashboard .day-background {
+  border-right-color: #a6b6c5;
+  background-image: linear-gradient(to right, #d6dfe6 1px, transparent 1px);
+}
+.planning-dashboard .day-heading.off-day { background-color: #f1dfd0; }
+.planning-dashboard .day-background.off-day { background-color: #f8eadf; }
+.planning-dashboard .task-bar { color: #192d40; font-weight: 600; }
+.planning-dashboard .task-bar.completed { opacity: .92; }
+.planning-dashboard .task-bar.dragging-bar { opacity: .45; }
