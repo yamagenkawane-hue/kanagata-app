@@ -123,3 +123,4 @@ button.summary-card{width:100%;text-align:left;color:inherit}button.summary-card
 .planning-dashboard .part-heading strong { font-size: 13px; }
 .planning-dashboard .task-bar { font-size: 12px; }
 .planning-dashboard .gantt-task-name small { font-size: 11px; }
+.planning-dashboard .capacity-warning, .planning-dashboard .gantt-task-name small.capacity-warning { color: #ad182c; font-weight: 700; }
